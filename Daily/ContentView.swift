@@ -10,57 +10,59 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
-
+    @State private var selectedTab = 0
+    
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
+        TabView(selection: $selectedTab) {
+            TaskListView(category: .required)
+                .tabItem {
+                    Label("Required", systemImage: "checklist")
                 }
-                .onDelete(perform: deleteItems)
-            }
-#if os(macOS)
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-#endif
-            .toolbar {
-#if os(iOS)
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
+                .tag(0)
+            
+            TaskListView(category: .suggested)
+                .tabItem {
+                    Label("Suggested", systemImage: "star")
                 }
-#endif
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
+                .tag(1)
+        }
+        .toolbar {
+            ToolbarItem {
+                Button(action: addTask) {
+                    Label("Add Task", systemImage: "plus")
                 }
             }
-        } detail: {
-            Text("Select an item")
         }
     }
-
-    private func addItem() {
+    
+    private func addTask() {
         withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
+            let category: TaskCategory = selectedTab == 0 ? .required : .suggested
+            let newTask = Task(title: "New Task", order: getNextOrder(for: category), category: category)
+            modelContext.insert(newTask)
         }
     }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
+    
+    private func getNextOrder(for category: TaskCategory) -> Int {
+        do {
+            var descriptor = FetchDescriptor<Task>(
+                sortBy: [SortDescriptor(\Task.order, order: .reverse)]
+            )
+            descriptor.predicate = #Predicate<Task> { task in
+                task.category == category
             }
+            descriptor.fetchLimit = 1
+            
+            let result = try modelContext.fetch(descriptor)
+            return (result.first?.order ?? 0) + 1
+        } catch {
+            print("Error fetching next order: \(error)")
+            return 0
         }
     }
 }
 
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
+        .modelContainer(TaskMockData.createPreviewContainer())
 }

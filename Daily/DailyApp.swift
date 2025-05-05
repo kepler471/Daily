@@ -12,12 +12,18 @@ import SwiftData
 struct DailyApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            Task.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            let container = try ModelContainer(for: schema, configurations: [modelConfiguration])
+            
+            // Add sample tasks if the container is empty - for development purposes
+            let context = ModelContext(container)
+            try TaskMockData.createSampleTasks(in: context)
+            
+            return container
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }
