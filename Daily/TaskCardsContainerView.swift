@@ -14,8 +14,9 @@ struct TaskCardsContainerView: View {
     
     init(category: TaskCategory? = nil) {
         if let category = category {
-            _tasks = Query(filter: #Predicate { task in
-                task.category == category
+            let categoryString = category.rawValue
+            _tasks = Query(filter: #Predicate<Task> { task in
+                task.categoryRaw == categoryString
             }, sort: [
                 SortDescriptor(\Task.order, order: .forward),
                 SortDescriptor(\Task.createdAt, order: .forward)
@@ -66,8 +67,9 @@ struct TaskCardsGridView: View {
     
     init(category: TaskCategory? = nil) {
         if let category = category {
-            _tasks = Query(filter: #Predicate { task in
-                task.category == category
+            let categoryString = category.rawValue
+            _tasks = Query(filter: #Predicate<Task> { task in
+                task.categoryRaw == categoryString
             }, sort: [
                 SortDescriptor(\Task.order, order: .forward),
                 SortDescriptor(\Task.createdAt, order: .forward)

@@ -54,13 +54,13 @@ struct TaskCardView: View {
     private var cardBackground: some View {
         Group {
             if task.isCompleted {
-                Color(.systemBackground).opacity(0.8)
+                Color(.windowBackgroundColor).opacity(0.8)
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(Color.gray.opacity(0.3), lineWidth: 1)
                     )
             } else {
-                Color(.systemBackground)
+                Color(.windowBackgroundColor)
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(
