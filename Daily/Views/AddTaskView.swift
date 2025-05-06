@@ -1,104 +1,29 @@
 //
-//  ContentView.swift
+//  AddTaskView.swift
 //  Daily
 //
-//  Created by Stelios Georgiou on 05/05/2025.
+//  Created by Stelios Georgiou on 06/05/2025.
 //
 
 import SwiftUI
 import SwiftData
 
-struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @State private var selectedTab = 0
-    @State private var showingAddTask = false
+struct AddTaskButtonView: View {
+    @Binding var showingAddTask: Bool
     
     var body: some View {
-        TabView(selection: $selectedTab) {
-            TaskCardsContainerView(category: .required)
-                .tabItem {
-                    Label("Required", systemImage: "checklist")
-                }
-                .tag(0)
-            
-            TaskCardsContainerView(category: .suggested)
-                .tabItem {
-                    Label("Suggested", systemImage: "star")
-                }
-                .tag(1)
-        }
-        .overlay(alignment: .bottom) {
-            addButton
-        }
-        .overlay(alignment: .topTrailing) {
-            #if DEBUG
-            Button(action: resetData) {
-                Image(systemName: "trash")
-                    .padding(10)
-                    .background(Circle().fill(.ultraThinMaterial))
-                    .padding()
-            }
-            #endif
-        }
-        .sheet(isPresented: $showingAddTask) {
-            AddTaskView(category: selectedTab == 0 ? .required : .suggested)
-        }
-    }
-    
-    private var addButton: some View {
         Button {
             showingAddTask = true
         } label: {
             Image(systemName: "plus")
-                .font(.title2)
+                .font(.footnote)
                 .fontWeight(.semibold)
                 .foregroundColor(.white)
-                .frame(width: 50, height: 50)
+                .frame(width: 28, height: 28)
                 .background(
                     Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [.blue, .teal],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                        .fill(Color.blue)
                 )
-                .shadow(color: .black.opacity(0.15), radius: 5, x: 0, y: 2)
-        }
-        .padding(.bottom, 16)
-    }
-    
-    #if DEBUG
-    private func resetData() {
-        // Delete all tasks
-        do {
-            try modelContext.delete(model: Task.self)
-            
-            // Re-add sample data
-            try TaskMockData.createSampleTasks(in: modelContext)
-        } catch {
-            print("Error resetting data: \(error)")
-        }
-    }
-    #endif
-    
-    private func getNextOrder(for category: TaskCategory) -> Int {
-        do {
-            let categoryString = category.rawValue
-            var descriptor = FetchDescriptor<Task>(
-                sortBy: [SortDescriptor(\Task.order, order: .reverse)]
-            )
-            descriptor.predicate = #Predicate<Task> { task in
-                task.categoryRaw == categoryString
-            }
-            descriptor.fetchLimit = 1
-            
-            let result = try modelContext.fetch(descriptor)
-            return (result.first?.order ?? 0) + 1
-        } catch {
-            print("Error fetching next order: \(error)")
-            return 0
         }
     }
 }
@@ -190,6 +115,7 @@ struct AddTaskView: View {
 }
 
 #Preview {
-    ContentView()
-        .modelContainer(TaskMockData.createPreviewContainer())
+    AddTaskButtonView(showingAddTask: .constant(false))
+        .padding()
+        .previewLayout(.sizeThatFits)
 }
