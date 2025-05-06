@@ -22,19 +22,23 @@ struct TaskCardView: View {
                 
                 Spacer()
                 
+                if let scheduledTime = task.scheduledTime {
+                    HStack {
+                        Image(systemName: "clock")
+                            .foregroundColor(.secondary)
+                        
+                        Text(scheduledTime, format: .dateTime.hour().minute())
+                            .foregroundColor(.secondary)
+                    }
+                    .font(.subheadline)
+                }
+                
+                Spacer()
+                
                 categoryBadge
             }
             
-            if let scheduledTime = task.scheduledTime {
-                HStack {
-                    Image(systemName: "clock")
-                        .foregroundColor(.secondary)
-                    
-                    Text(scheduledTime, format: .dateTime.hour().minute())
-                        .foregroundColor(.secondary)
-                }
-                .font(.subheadline)
-            }
+
             
             HStack {
                 Spacer()

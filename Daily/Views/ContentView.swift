@@ -33,7 +33,7 @@ struct ContentView: View {
                 .padding(.vertical, 8)
                 
                 // Task cards container
-                TaskCardsContainerView(category: .required)
+                TaskStackView(useOverlap: true, useRotation: true, useScaling: true)
             }
             .tabItem {
                 Label("Required", systemImage: "checklist")
@@ -58,7 +58,7 @@ struct ContentView: View {
                 .padding(.vertical, 8)
                 
                 // Task cards container
-                TaskCardsContainerView(category: .suggested)
+                TaskStackView(useOverlap: true, useRotation: true, useScaling: true)
             }
             .tabItem {
                 Label("Suggested", systemImage: "star")
