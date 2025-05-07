@@ -243,10 +243,12 @@ struct TaskStackView: View {
     
     var body: some View {
         CardStackLayout {
-            ForEach(tasks) { task in
+            ForEach(Array(tasks.enumerated()), id: \.element.id) { index, task in
                 TaskCardView(task: task) {
                     task.isCompleted.toggle()
                 }
+                // Apply z-index directly here, crucial for proper stacking
+                .zIndex(Double(tasks.count - index))
             }
         }
         .padding()
