@@ -16,11 +16,15 @@ struct TaskStackView: View {
     // Stack configuration
     var verticalOffset: CGFloat
     var offsetByIndex: ((Int) -> CGFloat)?
+    var scaleByIndex: ((Int) -> CGFloat)?
+    var scaleAmount: CGFloat
     
-    /// Initialize with a constant vertical offset
-    init(verticalOffset: CGFloat = 20) {
+    /// Initialize with a constant vertical offset and optional scale
+    init(verticalOffset: CGFloat = 20, scale: CGFloat = 1.0) {
         self.verticalOffset = verticalOffset
         self.offsetByIndex = nil
+        self.scaleByIndex = nil
+        self.scaleAmount = scale
         
         _tasks = Query(sort: [
             SortDescriptor(\Task.order, order: .forward),
@@ -28,10 +32,25 @@ struct TaskStackView: View {
         ])
     }
     
-    /// Initialize with a function mapping index to offset
-    init(offsetByIndex: @escaping (Int) -> CGFloat) {
+    /// Initialize with a function mapping index to offset and optional scale
+    init(offsetByIndex: @escaping (Int) -> CGFloat, scale: CGFloat = 1.0) {
         self.verticalOffset = 0 // Not used in this initialization
         self.offsetByIndex = offsetByIndex
+        self.scaleByIndex = nil
+        self.scaleAmount = scale
+        
+        _tasks = Query(sort: [
+            SortDescriptor(\Task.order, order: .forward),
+            SortDescriptor(\Task.createdAt, order: .forward)
+        ])
+    }
+    
+    /// Initialize with functions for both offset and scale
+    init(offsetByIndex: @escaping (Int) -> CGFloat, scaleByIndex: @escaping (Int) -> CGFloat) {
+        self.verticalOffset = 0 // Not used in this initialization
+        self.offsetByIndex = offsetByIndex
+        self.scaleByIndex = scaleByIndex
+        self.scaleAmount = 1.0 // Not used in this initialization
         
         _tasks = Query(sort: [
             SortDescriptor(\Task.order, order: .forward),
@@ -47,6 +66,8 @@ struct TaskStackView: View {
                 }
                 // Handle vertical offset based on initialization method
                 .offset(y: calculateYOffset(for: index))
+                // Apply scaling effect
+                .scaleEffect(calculateScale(for: index))
                 // Ensure proper stacking with z-index
                 .zIndex(Double(tasks.count - index))
             }
@@ -62,6 +83,30 @@ struct TaskStackView: View {
         } else {
             // Use the constant offset multiplied by index
             return verticalOffset * CGFloat(index)
+        }
+    }
+    
+    /// Calculate the scale for a card at the given index
+    private func calculateScale(for index: Int) -> CGFloat {
+        if let scaleByIndex = scaleByIndex {
+            // Use the scaling function if provided
+            return scaleByIndex(index)
+        } else {
+            // Apply linear scaling based on index and scale amount
+            // The formula ensures that the first card (index 0) has scale 1.0,
+            // and each subsequent card is scaled down by a factor proportional to scaleAmount
+            let baseScale = 1.0
+            let scaleFactor = scaleAmount
+            let numberOfCards = CGFloat(tasks.count)
+            
+            // No scaling if scale amount is 1.0
+            if scaleFactor == 1.0 {
+                return 1.0
+            }
+            
+            // Otherwise, scale down for deeper cards in the stack
+            // Ensure we don't scale below 0.5
+            return max(baseScale - (baseScale - scaleFactor) * CGFloat(index) / max(1, numberOfCards - 1), 0.5)
         }
     }
 }
@@ -82,6 +127,28 @@ struct TaskStackView: View {
         .frame(height: 600)
         .padding()
         .modelContainer(TaskMockData.createPreviewContainer())
+}
+
+#Preview("With Scale") {
+    TaskStackView(verticalOffset: 20, scale: 0.85)
+        .frame(height: 600)
+        .padding()
+        .modelContainer(TaskMockData.createPreviewContainer())
+}
+
+#Preview("Log with Scale") {
+    TaskStackView(
+        offsetByIndex: { i in
+            return CGFloat(60 * pow(0.2 * Double(i), 0.5))
+        },
+        scaleByIndex: { i in
+            // Scale from 1.0 down to 0.7 based on index
+            return 1.0 - CGFloat(i) * 0.05
+        }
+    )
+    .frame(height: 600)
+    .padding()
+    .modelContainer(TaskMockData.createPreviewContainer())
 }
 
 #Preview("Interactive") {
