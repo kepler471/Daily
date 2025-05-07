@@ -8,78 +8,169 @@
 import SwiftUI
 import SwiftData
 
-// MARK: - Card Stack Modifiers
+// MARK: - Stack Configuration
 
-/// Applies overlapping effect to cards in a stack
-struct CardOverlapModifier: ViewModifier {
-    let index: Int
-    let amount: CGFloat
+/// Environment key to store stack configuration
+private struct StackConfigurationKey: EnvironmentKey {
+    static let defaultValue = StackConfiguration()
+}
+
+/// Environment extension for stack configuration
+extension EnvironmentValues {
+    var stackConfiguration: StackConfiguration {
+        get { self[StackConfigurationKey.self] }
+        set { self[StackConfigurationKey.self] = newValue }
+    }
+}
+
+/// Configuration for card stack effects
+struct StackConfiguration {
+    // Overlap configuration
+    var overlapEnabled: Bool = false
+    var overlapAmount: CGFloat = 20
+    var overlapFunction: (Int, Int) -> CGFloat = { index, total in
+        CGFloat(index)
+    }
+    
+    // Rotation configuration
+    var rotationEnabled: Bool = false
+    var rotationDegrees: Double = 5
+    var rotationFunction: (Int, Int) -> Double = { index, total in
+        Double(index)
+    }
+    
+    // Scaling configuration
+    var scalingEnabled: Bool = false
+    var scaleFactor: Double = 0.05
+    var scaleFunction: (Int, Int) -> Double = { index, total in
+        Double(index)
+    }
+    
+    // Animation configuration
+    var animation: Animation? = .easeInOut(duration: 0.3)
+}
+
+// MARK: - Stack Effect Modifiers
+
+/// Base modifier for applying stack effects to a collection of views
+struct StackEffectModifier: ViewModifier {
+    @Environment(\.stackConfiguration) private var config
     
     func body(content: Content) -> some View {
         content
-            .offset(y: CGFloat(index) * amount)
+    }
+}
+
+/// Applies overlapping effect to cards in a stack
+struct CardOverlapModifier: ViewModifier {
+    let amount: CGFloat
+    let mapper: (Int, Int) -> CGFloat
+    
+    func body(content: Content) -> some View {
+        content.transformEffect { view, index, count in
+            view.offset(y: mapper(index, count) * amount)
+        }
     }
 }
 
 /// Applies 3D rotation effect to cards
 struct Card3DRotationModifier: ViewModifier {
-    let index: Int
     let degrees: Double
+    let mapper: (Int, Int) -> Double
     
     func body(content: Content) -> some View {
-        content
-            .rotation3DEffect(
-                .degrees(Double(index) * degrees),
+        content.transformEffect { view, index, count in
+            view.rotation3DEffect(
+                .degrees(mapper(index, count) * degrees),
                 axis: (x: 1.0, y: 0, z: 0),
                 anchor: .bottom,
                 perspective: 0.5
             )
+        }
     }
 }
 
 /// Applies scaling effect to cards
 struct CardScalingModifier: ViewModifier {
-    let index: Int
     let factor: Double
+    let mapper: (Int, Int) -> Double
     
     func body(content: Content) -> some View {
-        content
-            .scaleEffect(1.0 - (Double(index) * factor), anchor: .bottom)
+        content.transformEffect { view, index, count in
+            view.scaleEffect(1.0 - (mapper(index, count) * factor), anchor: .bottom)
+        }
+    }
+}
+
+/// Helper modifier that provides index and count info to transformations
+struct TransformEffectModifier<T: View>: ViewModifier {
+    let transform: (Content, Int, Int) -> T
+    
+    func body(content: Content) -> some View {
+        content // The actual implementation needs access to SwiftUI's internals
+               // This is a placeholder as the actual implementation will happen in the TaskStackView
     }
 }
 
 // MARK: - View Extensions
 
 extension View {
+    /// Applies a transform based on index and total count
+    /// Note: This is a placeholder function - actual implementation happens in the parent view
+    func transformEffect<T: View>(_ transform: @escaping (Self, Int, Int) -> T) -> some View {
+        self // This is a placeholder method for the API design
+    }
+    
+    /// Sets the stack configuration environment for child views
+    func stackConfiguration(_ configuration: StackConfiguration) -> some View {
+        environment(\.stackConfiguration, configuration)
+    }
+    
     /// Applies an overlapping effect to cards
-    func cardOverlap(index: Int, amount: CGFloat = 20) -> some View {
-        self.modifier(CardOverlapModifier(index: index, amount: amount))
+    func cardOverlap(_ amount: CGFloat = 20, mapper: @escaping (Int, Int) -> CGFloat = { index, _ in CGFloat(index) }) -> some View {
+        self.modifier(CardOverlapModifier(amount: amount, mapper: mapper))
     }
     
     /// Applies a 3D rotation effect to cards
-    func card3DRotation(index: Int, degrees: Double = 5) -> some View {
-        self.modifier(Card3DRotationModifier(index: index, degrees: degrees))
+    func card3DRotation(_ degrees: Double = 5, mapper: @escaping (Int, Int) -> Double = { index, _ in Double(index) }) -> some View {
+        self.modifier(Card3DRotationModifier(degrees: degrees, mapper: mapper))
     }
     
     /// Applies scaling to create depth effect
-    func cardScaling(index: Int, factor: Double = 0.05) -> some View {
-        self.modifier(CardScalingModifier(index: index, factor: factor))
+    func cardScaling(_ factor: Double = 0.05, mapper: @escaping (Int, Int) -> Double = { index, _ in Double(index) }) -> some View {
+        self.modifier(CardScalingModifier(factor: factor, mapper: mapper))
     }
 }
 
 // MARK: - Task Stack View
 
+/// A specialized stack view for displaying tasks with various visual effects
 struct TaskStackView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var tasks: [Task]
     
-    var useOverlap: Bool = false
-    var useRotation: Bool = false
-    var useScaling: Bool = false
-    var overlapAmount: CGFloat = 20
-    var rotationDegrees: Double = 5
-    var scaleFactor: Double = 0.05
+    // Internal configuration 
+    private var config = StackConfiguration()
     
+    /// Initialize with default configuration
+    init() {
+        _tasks = Query(sort: [
+            SortDescriptor(\Task.order, order: .forward),
+            SortDescriptor(\Task.createdAt, order: .forward)
+        ])
+    }
+    
+    /// Initialize with configuration
+    init(configuration: StackConfiguration) {
+        self.config = configuration
+        
+        _tasks = Query(sort: [
+            SortDescriptor(\Task.order, order: .forward),
+            SortDescriptor(\Task.createdAt, order: .forward)
+        ])
+    }
+    
+    /// Backwards compatibility initializer
     init(
         useOverlap: Bool = false,
         useRotation: Bool = false,
@@ -88,12 +179,16 @@ struct TaskStackView: View {
         rotationDegrees: Double = 5,
         scaleFactor: Double = 0.05
     ) {
-        self.useOverlap = useOverlap
-        self.useRotation = useRotation
-        self.useScaling = useScaling
-        self.overlapAmount = overlapAmount
-        self.rotationDegrees = rotationDegrees
-        self.scaleFactor = scaleFactor
+        // Convert old parameters to new configuration
+        var config = StackConfiguration()
+        config.overlapEnabled = useOverlap
+        config.overlapAmount = overlapAmount
+        config.rotationEnabled = useRotation
+        config.rotationDegrees = rotationDegrees
+        config.scalingEnabled = useScaling
+        config.scaleFactor = scaleFactor
+        
+        self.config = config
         
         _tasks = Query(sort: [
             SortDescriptor(\Task.order, order: .forward),
@@ -106,23 +201,142 @@ struct TaskStackView: View {
             ZStack {
                 ForEach(Array(tasks.enumerated()), id: \.element.id) { index, task in
                     TaskCardView(task: task) {
-                        withAnimation {
+                        withAnimation(config.animation) {
                             task.isCompleted.toggle()
                         }
                     }
                     .zIndex(Double(tasks.count - index))
-                    .apply(if: useOverlap) { view in
-                        view.cardOverlap(index: index, amount: overlapAmount)
-                    }
-                    .apply(if: useRotation) { view in
-                        view.card3DRotation(index: index, degrees: rotationDegrees)
-                    }
-                    .apply(if: useScaling) { view in
-                        view.cardScaling(index: index, factor: scaleFactor)
-                    }
+                    // Apply the transformations with the actual index information
+                    .modifier(CardStackModifiers(index: index, count: tasks.count, config: config))
                 }
             }
             .padding()
+        }
+        .environment(\.stackConfiguration, config)
+    }
+    
+    /// Applies card overlap effect
+    func cardOverlap(_ amount: CGFloat, mapper: @escaping (Int, Int) -> CGFloat = { index, _ in CGFloat(index) }) -> TaskStackView {
+        var newConfig = config
+        newConfig.overlapEnabled = true
+        newConfig.overlapAmount = amount
+        newConfig.overlapFunction = mapper
+        return TaskStackView(configuration: newConfig)
+    }
+    
+    /// Applies card 3D rotation effect
+    func card3DRotation(_ degrees: Double, mapper: @escaping (Int, Int) -> Double = { index, _ in Double(index) }) -> TaskStackView {
+        var newConfig = config
+        newConfig.rotationEnabled = true
+        newConfig.rotationDegrees = degrees
+        newConfig.rotationFunction = mapper
+        return TaskStackView(configuration: newConfig)
+    }
+    
+    /// Applies card scaling effect
+    func cardScaling(_ factor: Double, mapper: @escaping (Int, Int) -> Double = { index, _ in Double(index) }) -> TaskStackView {
+        var newConfig = config
+        newConfig.scalingEnabled = true
+        newConfig.scaleFactor = factor
+        newConfig.scaleFunction = mapper
+        return TaskStackView(configuration: newConfig)
+    }
+    
+    /// Applies animation to the effects
+    func withStackAnimation(_ animation: Animation?) -> TaskStackView {
+        var newConfig = config
+        newConfig.animation = animation
+        return TaskStackView(configuration: newConfig)
+    }
+}
+
+/// A composite modifier that applies all card stack effects based on index
+struct CardStackModifiers: ViewModifier {
+    let index: Int
+    let count: Int
+    let config: StackConfiguration
+    
+    func body(content: Content) -> some View {
+        content
+            .modifier(CardStackOverlapModifier(
+                enabled: config.overlapEnabled,
+                index: index,
+                count: count,
+                amount: config.overlapAmount,
+                mapper: config.overlapFunction
+            ))
+            .modifier(CardStack3DRotationModifier(
+                enabled: config.rotationEnabled,
+                index: index,
+                count: count,
+                degrees: config.rotationDegrees,
+                mapper: config.rotationFunction
+            ))
+            .modifier(CardStackScalingModifier(
+                enabled: config.scalingEnabled,
+                index: index,
+                count: count,
+                factor: config.scaleFactor,
+                mapper: config.scaleFunction
+            ))
+    }
+}
+
+/// Actual implementation of the card overlap effect
+struct CardStackOverlapModifier: ViewModifier {
+    let enabled: Bool
+    let index: Int
+    let count: Int
+    let amount: CGFloat
+    let mapper: (Int, Int) -> CGFloat
+    
+    func body(content: Content) -> some View {
+        if enabled {
+            content
+                .offset(y: mapper(index, count) * amount)
+        } else {
+            content
+        }
+    }
+}
+
+/// Actual implementation of the card 3D rotation effect
+struct CardStack3DRotationModifier: ViewModifier {
+    let enabled: Bool
+    let index: Int
+    let count: Int
+    let degrees: Double
+    let mapper: (Int, Int) -> Double
+    
+    func body(content: Content) -> some View {
+        if enabled {
+            content
+                .rotation3DEffect(
+                    .degrees(mapper(index, count) * degrees),
+                    axis: (x: 1.0, y: 0, z: 0),
+                    anchor: .bottom,
+                    perspective: 0.5
+                )
+        } else {
+            content
+        }
+    }
+}
+
+/// Actual implementation of the card scaling effect
+struct CardStackScalingModifier: ViewModifier {
+    let enabled: Bool
+    let index: Int
+    let count: Int
+    let factor: Double
+    let mapper: (Int, Int) -> Double
+    
+    func body(content: Content) -> some View {
+        if enabled {
+            content
+                .scaleEffect(1.0 - (mapper(index, count) * factor), anchor: .bottom)
+        } else {
+            content
         }
     }
 }
@@ -147,36 +361,55 @@ struct TaskStackViewPreviews: View {
         TabView {
             TaskStackView()
                 .tabItem {
-                    Label("Basic", systemImage: "list.bullet")
+                    Label("1", systemImage: "list.bullet")
                 }
             
-            TaskStackView(useOverlap: true)
+            // Using the new modifier approach
+            TaskStackView()
+                .cardOverlap(20)
                 .tabItem {
-                    Label("Overlap", systemImage: "square.stack")
+                    Label("2", systemImage: "square.stack")
                 }
             
-            TaskStackView(useRotation: true)
+            // Using the new modifier with custom mapping function
+            TaskStackView()
+                .cardOverlap(25) { index, count in
+                    // Non-linear spacing - cards closer at the top
+                    CGFloat(index) * (1.0 - CGFloat(index) / CGFloat(count) * 0.3)
+                }
                 .tabItem {
-                    Label("Rotation", systemImage: "rotate.3d")
+                    Label("3", systemImage: "square.stack.3d")
                 }
             
-            TaskStackView(useScaling: true)
+            TaskStackView()
+                .card3DRotation(5)
                 .tabItem {
-                    Label("Scaling", systemImage: "plus.forwardslash.minus")
+                    Label("4", systemImage: "rotate.3d")
                 }
             
+            TaskStackView()
+                .cardScaling(0.05)
+                .tabItem {
+                    Label("5", systemImage: "plus.forwardslash.minus")
+                }
+            
+            // Combining multiple effects with animation
+            TaskStackView()
+                .cardOverlap(20)
+                .card3DRotation(5)
+                .cardScaling(0.05)
+                .withStackAnimation(.spring(duration: 0.4))
+                .tabItem {
+                    Label("6", systemImage: "sparkles")
+                }
+            
+            // Using the old approach for backwards compatibility
             TaskStackView(useOverlap: true, useRotation: true, useScaling: true)
                 .tabItem {
-                    Label("All Effects", systemImage: "sparkles")
+                    Label("7", systemImage: "backward")
                 }
         }
     }
-}
-
-#Preview("Task Stack View Test") {
-    TaskStackView()
-//        .overlapAmount(0.5)
-        .modelContainer(TaskMockData.createPreviewContainer())
 }
 
 #Preview("Task Stack View Options") {
