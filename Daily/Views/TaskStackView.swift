@@ -164,6 +164,12 @@ struct TaskStackAdjustablePreview: View {
     @State private var offset: Double = 2
     @State private var formula: OffsetFormula = .exponential
     
+    // Scale parameters
+    @State private var useScale: Bool = false
+    @State private var scaleValue: Double = 0.85
+    @State private var useCustomScale: Bool = false
+    @State private var scaleMin: Double = 0.7
+    
     enum OffsetFormula: String, CaseIterable, Identifiable {
         case linear = "Linear"
         case exponential = "Exponential"
@@ -195,21 +201,20 @@ struct TaskStackAdjustablePreview: View {
             
             // Parameter sliders - Middle section with fixed height
             VStack {
-                // Always visible base value slider
-                HStack {
-                    Text("Base Value:")
-                        .frame(width: 100, alignment: .leading)
+                // Offset parameters
+                VStack(spacing: 12) {
+                    // Always visible base value slider
+                    HStack {
+                        Text("Offset Base:")
+                            .frame(width: 100, alignment: .leading)
+                        
+                        Text("\(baseValue, specifier: "%.1f")")
+                            .frame(width: 50)
+                        
+                        Slider(value: $baseValue, in: 10...100, step: 1)
+                    }
                     
-                    Text("\(baseValue, specifier: "%.1f")")
-                        .frame(width: 50)
-                    
-                    Slider(value: $baseValue, in: 10...100, step: 1)
-                }
-                .padding(.top, 8)
-                
-                // Formula-specific parameters
-                VStack(spacing: 16) {
-                    // Parameter 1 (Exponent/Base/Factor)
+                    // Formula-specific parameters
                     if formula != .linear {
                         HStack {
                             Text("\(formulaExponentLabel):")
@@ -222,7 +227,6 @@ struct TaskStackAdjustablePreview: View {
                         }
                     }
                     
-                    // Parameter 2 (Offset) for applicable formulas
                     if formula == .logarithmic || formula == .squareRoot {
                         HStack {
                             Text("Offset:")
@@ -236,10 +240,43 @@ struct TaskStackAdjustablePreview: View {
                     }
                 }
                 
-                // Spacer to ensure fixed height
-                Spacer(minLength: 0)
+                Divider()
+                    .padding(.vertical, 6)
+                
+                // Scale parameters
+                VStack(spacing: 10) {
+                    Toggle("Enable Scaling", isOn: $useScale)
+                        .padding(.horizontal)
+                    
+                    if useScale {
+                        Toggle("Custom Scale Function", isOn: $useCustomScale)
+                            .padding(.horizontal)
+                        
+                        if useCustomScale {
+                            HStack {
+                                Text("Min Scale:")
+                                    .frame(width: 100, alignment: .leading)
+                                
+                                Text("\(scaleMin, specifier: "%.2f")")
+                                    .frame(width: 50)
+                                
+                                Slider(value: $scaleMin, in: 0.5...0.95, step: 0.01)
+                            }
+                        } else {
+                            HStack {
+                                Text("Scale Factor:")
+                                    .frame(width: 100, alignment: .leading)
+                                
+                                Text("\(scaleValue, specifier: "%.2f")")
+                                    .frame(width: 50)
+                                
+                                Slider(value: $scaleValue, in: 0.7...0.98, step: 0.01)
+                            }
+                        }
+                    }
+                }
             }
-            .frame(height: 120) // Fixed height for the controls section
+            .frame(height: 190) // Fixed height for the controls section
             .padding(.horizontal)
             
             // Code representation - Bottom section
@@ -252,11 +289,11 @@ struct TaskStackAdjustablePreview: View {
                     RoundedRectangle(cornerRadius: 8)
                         .fill(Color.secondary.opacity(0.1))
                     
-                    Text(formulaText)
+                    Text(generateCodeText())
                         .font(.system(.caption, design: .monospaced))
                         .padding()
                 }
-                .frame(height: 70)
+                .frame(height: 80)
                 .padding(.horizontal)
                 .padding(.bottom, 8)
             }
@@ -265,8 +302,24 @@ struct TaskStackAdjustablePreview: View {
             Divider()
             
             // TaskStackView with dynamic parameters
-            TaskStackView(offsetByIndex: offsetFunction)
-                .frame(minHeight: 400)
+            if useScale {
+                if useCustomScale {
+                    TaskStackView(
+                        offsetByIndex: offsetFunction,
+                        scaleByIndex: customScaleFunction
+                    )
+                    .frame(minHeight: 380)
+                } else {
+                    TaskStackView(
+                        offsetByIndex: offsetFunction,
+                        scale: CGFloat(scaleValue)
+                    )
+                    .frame(minHeight: 380)
+                }
+            } else {
+                TaskStackView(offsetByIndex: offsetFunction)
+                    .frame(minHeight: 380)
+            }
         }
         .padding(.vertical)
     }
@@ -293,6 +346,14 @@ struct TaskStackAdjustablePreview: View {
         }
     }
     
+    // Generate a custom scale function that scales cards from 1.0 to min scale
+    private var customScaleFunction: (Int) -> CGFloat {
+        return { index in
+            // Linear scaling from 1.0 down to minimum scale
+            return max(1.0 - CGFloat(index) * 0.05, CGFloat(self.scaleMin))
+        }
+    }
+    
     // Get the appropriate exponent range based on formula
     private func getExponentRange() -> (Double, Double) {
         switch formula {
@@ -315,8 +376,28 @@ struct TaskStackAdjustablePreview: View {
         }
     }
     
-    // Get the code representation of the current formula
-    private var formulaText: String {
+    // Generate the full code representation based on current settings
+    private func generateCodeText() -> String {
+        var code = "TaskStackView(\n"
+        
+        // Add offset function
+        code += "    offsetByIndex: \(getOffsetFunctionText())"
+        
+        // Add scale if enabled
+        if useScale {
+            if useCustomScale {
+                code += ",\n    scaleByIndex: \(getScaleFunctionText())"
+            } else {
+                code += ",\n    scale: \(String(format: "%.2f", scaleValue))"
+            }
+        }
+        
+        code += "\n)"
+        return code
+    }
+    
+    // Get the offset function code representation
+    private func getOffsetFunctionText() -> String {
         switch formula {
         case .linear:
             return "{ index in -\(String(format: "%.1f", baseValue)) * CGFloat(index) }"
@@ -333,5 +414,10 @@ struct TaskStackAdjustablePreview: View {
         case .power:
             return "{ index in -\(String(format: "%.1f", baseValue)) / pow(CGFloat(index) + \(String(format: "%.2f", exponent)), \(String(format: "%.2f", exponent))) }"
         }
+    }
+    
+    // Get the scale function code representation
+    private func getScaleFunctionText() -> String {
+        return "{ index in max(1.0 - CGFloat(index) * 0.05, \(String(format: "%.2f", scaleMin))) }"
     }
 }
