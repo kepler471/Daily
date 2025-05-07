@@ -123,7 +123,28 @@ struct TaskStackView: View {
     
     /// Calculate the scale for a card at the given index
     private func calculateScale(for index: Int) -> CGFloat {
-        if let scaleByIndex = scaleByIndex {
+        // When cards are fanned out in selection mode, apply distance-based scaling
+        if isSelectionModeActive {
+            // The hovered card remains at full scale
+            if hoveredTaskIndex == index {
+                return 1.0
+            }
+            
+            // If no card is hovered, use the middle of the stack as reference
+            let referenceIndex = hoveredTaskIndex ?? (tasks.count / 2)
+            
+            // Calculate distance from the hovered/reference card
+            let distance = abs(index - referenceIndex)
+            
+            // Scale down based on distance from hovered card
+            // The further away, the smaller the scale
+            let minScale: CGFloat = 0.8
+            let scaleReduction: CGFloat = 0.05 * min(CGFloat(distance), 3.0)
+            
+            return max(1.0 - scaleReduction, minScale)
+        } 
+        // For normal stacked mode, use the provided scaling function or default scaling
+        else if let scaleByIndex = scaleByIndex {
             // Use the scaling function if provided
             return scaleByIndex(index)
         } else {
@@ -165,7 +186,7 @@ struct TaskStackView: View {
         let basePosition = positionFactor * (fanHeight / 2.0)
         
         // Apply a small offset for the hovered card to make it stand out
-        let hoverBonus: CGFloat = (hoveredTaskIndex == index) ? -15 : 0
+        let hoverBonus: CGFloat = (hoveredTaskIndex == index) ? -5 : 0
         
         return basePosition + hoverBonus
     }
