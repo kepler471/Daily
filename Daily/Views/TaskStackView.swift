@@ -13,6 +13,10 @@ struct TaskStackView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var tasks: [Task]
     
+    // State for hover effects
+    @State private var hoveredTaskIndex: Int? = nil
+    @State private var isSelectionModeActive: Bool = false
+    
     // Stack configuration
     var verticalOffset: CGFloat
     var offsetByIndex: ((Int) -> CGFloat)?
@@ -64,12 +68,43 @@ struct TaskStackView: View {
                 TaskCardView(task: task) {
                     task.isCompleted.toggle()
                 }
-                // Handle vertical offset based on initialization method
-                .offset(y: calculateYOffset(for: index))
+                // Handle vertical offset - use extended spacing in selection mode
+                .offset(y: isSelectionModeActive ? 
+                      calculateExpandedOffset(for: index) : 
+                      calculateYOffset(for: index))
                 // Apply scaling effect
                 .scaleEffect(calculateScale(for: index))
-                // Ensure proper stacking with z-index
-                .zIndex(Double(tasks.count - index))
+                // Ensure proper stacking with z-index - with hover adjustment
+                .zIndex(calculateZIndex(for: index))
+                // Apply hover effects
+                .onHover { isHovered in
+                    if isHovered {
+                        // Card is being hovered over
+                        hoveredTaskIndex = index
+                        
+                        // Activate selection mode when any card is hovered
+                        if !isSelectionModeActive {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                isSelectionModeActive = true
+                            }
+                        }
+                    } else if hoveredTaskIndex == index {
+                        // Card is no longer being hovered
+                        hoveredTaskIndex = nil
+                        
+                        // Keep selection mode active for a longer time to allow moving to another card
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                            if hoveredTaskIndex == nil {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                                    isSelectionModeActive = false
+                                }
+                            }
+                        }
+                    }
+                }
+                // Animation for all changes except selection mode toggling
+                // (selection mode uses its own animation in the onHover handler)
+                .animation(.easeOut(duration: 0.3), value: hoveredTaskIndex)
             }
         }
         .padding()
@@ -109,6 +144,52 @@ struct TaskStackView: View {
             return max(baseScale - (baseScale - scaleFactor) * CGFloat(index) / max(1, numberOfCards - 1), 0.5)
         }
     }
+    
+    /// Calculate an expanded vertical offset for fan-out view in selection mode
+    private func calculateExpandedOffset(for index: Int) -> CGFloat {
+        let totalCards = tasks.count
+        
+        // Get the current reference point (hovered card or middle if none hovered)
+        let referenceIndex = hoveredTaskIndex ?? (totalCards / 2)
+        
+        // Calculate position in original stack
+        let basePosition = calculateYOffset(for: index)
+        
+        // Critical: If this is the hovered card, preserve its original position
+        if index == hoveredTaskIndex {
+            return basePosition
+        }
+        
+        // Calculate relative position from hovered card
+        let relativePosition = index - referenceIndex
+        
+        // Use simple fixed spacing for a cleaner, more predictable fan-out
+        // This creates an even, linear distribution that's easier to navigate
+        let spacing: CGFloat = 90.0
+        
+        // Calculate offset relative to the hovered card's position
+        let hoveredCardPosition = hoveredTaskIndex != nil ? 
+            calculateYOffset(for: hoveredTaskIndex!) : 0
+            
+        // Apply offset based on relative position
+        // Simple linear distribution with fixed spacing between each card
+        let offset = hoveredCardPosition + (CGFloat(relativePosition) * spacing)
+        
+        return offset
+    }
+    
+    /// Calculate the z-index for a card, taking into account hover state
+    private func calculateZIndex(for index: Int) -> Double {
+        let baseZIndex = Double(tasks.count - index)
+        
+        // If this task is being hovered, bring it to the front by adding a high value
+        if hoveredTaskIndex == index {
+            // Add a value higher than the task count to ensure it's on top
+            return baseZIndex + 1000
+        }
+        
+        return baseZIndex
+    }
 }
 
 // MARK: - Previews
@@ -147,6 +228,29 @@ struct TaskStackView: View {
         }
     )
     .frame(height: 600)
+    .padding()
+    .modelContainer(TaskMockData.createPreviewContainer())
+}
+
+#Preview("Hover Effects") {
+    VStack {
+        Text("Hover over any card to fan out the stack")
+            .font(.headline)
+            .padding(.bottom)
+        
+        Text("Cards fan out non-linearly from the hovered card")
+            .font(.subheadline)
+            .foregroundColor(.secondary)
+            .padding(.bottom)
+        
+        TaskStackView(
+            offsetByIndex: { i in
+                return CGFloat(30 * i)
+            },
+            scale: 0.9
+        )
+        .frame(height: 600)
+    }
     .padding()
     .modelContainer(TaskMockData.createPreviewContainer())
 }
