@@ -33,8 +33,7 @@ struct ContentView: View {
                 .padding(.vertical, 8)
                 
                 // Task cards container with overlapping effect
-                TaskStackView(verticalOffset: 20)
-            }
+                TaskStackView(verticalOffset: 20, scale: 0.85)            }
             .tabItem {
                 Label("Required", systemImage: "checklist")
             }
@@ -58,9 +57,7 @@ struct ContentView: View {
                 .padding(.vertical, 8)
                 
                 // Task cards container with custom offset based on index
-                TaskStackView(offsetByIndex: { index in
-                    return CGFloat(15 + index * 5)
-                })
+                TaskStackView(verticalOffset: 20, scale: 0.85)
             }
             .tabItem {
                 Label("Suggested", systemImage: "star")
