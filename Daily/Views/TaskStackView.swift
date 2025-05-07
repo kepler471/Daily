@@ -84,7 +84,7 @@ struct TaskStackView: View {
                         
                         // Activate selection mode when any card is hovered
                         if !isSelectionModeActive {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                                 isSelectionModeActive = true
                             }
                         }
@@ -92,10 +92,10 @@ struct TaskStackView: View {
                         // Card is no longer being hovered
                         hoveredTaskIndex = nil
                         
-                        // Keep selection mode active for a longer time to allow moving to another card
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                        // Keep selection mode active for a shorter time to allow moving to another card
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
                             if hoveredTaskIndex == nil {
-                                withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                                     isSelectionModeActive = false
                                 }
                             }
@@ -104,7 +104,7 @@ struct TaskStackView: View {
                 }
                 // Animation for all changes except selection mode toggling
                 // (selection mode uses its own animation in the onHover handler)
-                .animation(.easeOut(duration: 0.3), value: hoveredTaskIndex)
+                .animation(.easeOut(duration: 0.2), value: hoveredTaskIndex)
             }
         }
         .padding()
@@ -149,33 +149,25 @@ struct TaskStackView: View {
     private func calculateExpandedOffset(for index: Int) -> CGFloat {
         let totalCards = tasks.count
         
-        // Get the current reference point (hovered card or middle if none hovered)
-        let referenceIndex = hoveredTaskIndex ?? (totalCards / 2)
+        // Fixed spacing between cards in fan-out mode
+        let cardSpacing: CGFloat = 70.0
         
-        // Calculate position in original stack
-        let basePosition = calculateYOffset(for: index)
+        // Calculate position in fan-out mode based on index only
+        // This creates stable positions regardless of which card is hovered
+        let normalizedPosition = CGFloat(index) / CGFloat(max(1, totalCards - 1))
         
-        // Critical: If this is the hovered card, preserve its original position
-        if index == hoveredTaskIndex {
-            return basePosition
-        }
+        // Map to a range from -1.0 to 1.0 (centered around 0.5)
+        // This makes the middle card at y=0, with cards above going negative and below going positive
+        let positionFactor = (normalizedPosition - 0.5) * 2.0
         
-        // Calculate relative position from hovered card
-        let relativePosition = index - referenceIndex
+        // Calculate total height of the fan and center it
+        let fanHeight = cardSpacing * CGFloat(totalCards - 1)
+        let basePosition = positionFactor * (fanHeight / 2.0)
         
-        // Use simple fixed spacing for a cleaner, more predictable fan-out
-        // This creates an even, linear distribution that's easier to navigate
-        let spacing: CGFloat = 90.0
+        // Apply a small offset for the hovered card to make it stand out
+        let hoverBonus: CGFloat = (hoveredTaskIndex == index) ? -15 : 0
         
-        // Calculate offset relative to the hovered card's position
-        let hoveredCardPosition = hoveredTaskIndex != nil ? 
-            calculateYOffset(for: hoveredTaskIndex!) : 0
-            
-        // Apply offset based on relative position
-        // Simple linear distribution with fixed spacing between each card
-        let offset = hoveredCardPosition + (CGFloat(relativePosition) * spacing)
-        
-        return offset
+        return basePosition + hoverBonus
     }
     
     /// Calculate the z-index for a card, taking into account hover state
