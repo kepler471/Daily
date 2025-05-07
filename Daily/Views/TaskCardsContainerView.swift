@@ -10,50 +10,89 @@
 import SwiftUI
 import SwiftData
 
-// MARK: - Task Stack View
+// MARK: - Environment Keys
 
-/// A simple stack view for displaying tasks
-/// 
-/// This view is completely independent from any visual effects or transformations.
-/// It simply displays tasks in their default order.
-struct TaskStackView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var tasks: [Task]
-    
-    init() {
-        _tasks = Query(sort: [
-            SortDescriptor(\Task.order, order: .forward),
-            SortDescriptor(\Task.createdAt, order: .forward)
-        ])
+/// Environment key for card overlap amount
+private struct CardOverlapKey: EnvironmentKey {
+    static let defaultValue: CGFloat = 0
+}
+
+/// Environment key for overlap mapping function
+private struct CardOverlapMapperKey: EnvironmentKey {
+    static let defaultValue: (Int, Int) -> CGFloat = { index, _ in CGFloat(index) }
+}
+
+/// Environment key for card rotation degrees
+private struct CardRotationKey: EnvironmentKey {
+    static let defaultValue: Double = 0
+}
+
+/// Environment key for rotation mapping function
+private struct CardRotationMapperKey: EnvironmentKey {
+    static let defaultValue: (Int, Int) -> Double = { index, _ in Double(index) }
+}
+
+/// Environment key for card scale factor
+private struct CardScaleKey: EnvironmentKey {
+    static let defaultValue: Double = 0
+}
+
+/// Environment key for scale mapping function
+private struct CardScaleMapperKey: EnvironmentKey {
+    static let defaultValue: (Int, Int) -> Double = { index, _ in Double(index) }
+}
+
+extension EnvironmentValues {
+    /// Amount of vertical overlap between cards
+    var cardOverlap: CGFloat {
+        get { self[CardOverlapKey.self] }
+        set { self[CardOverlapKey.self] = newValue }
     }
     
-    var body: some View {
-        CardStackLayout {
-            ForEach(tasks) { task in
-                TaskCardView(task: task) {
-                    task.isCompleted.toggle()
-                }
-            }
-        }
-        .padding()
+    /// Function that maps card index to overlap factor
+    var cardOverlapMapper: (Int, Int) -> CGFloat {
+        get { self[CardOverlapMapperKey.self] }
+        set { self[CardOverlapMapperKey.self] = newValue }
+    }
+    
+    /// Degrees of 3D rotation for cards
+    var cardRotation: Double {
+        get { self[CardRotationKey.self] }
+        set { self[CardRotationKey.self] = newValue }
+    }
+    
+    /// Function that maps card index to rotation factor
+    var cardRotationMapper: (Int, Int) -> Double {
+        get { self[CardRotationMapperKey.self] }
+        set { self[CardRotationMapperKey.self] = newValue }
+    }
+    
+    /// Scale reduction factor for cards
+    var cardScale: Double {
+        get { self[CardScaleKey.self] }
+        set { self[CardScaleKey.self] = newValue }
+    }
+    
+    /// Function that maps card index to scale factor
+    var cardScaleMapper: (Int, Int) -> Double {
+        get { self[CardScaleMapperKey.self] }
+        set { self[CardScaleMapperKey.self] = newValue }
     }
 }
 
 // MARK: - Card Stack Layout
 
-/// A layout that stacks cards with configurable overlap, rotation, and scaling
+/// A layout that arranges cards in a stack with optional 3D effects
 struct CardStackLayout: Layout {
-    // Default configuration
-    var overlapAmount: CGFloat = 0
-    var rotationDegrees: Double = 0
-    var scaleFactor: Double = 0
+    // Access all effect parameters from environment
+    @Environment(\.cardOverlap) private var overlapAmount
+    @Environment(\.cardOverlapMapper) private var overlapMapper
+    @Environment(\.cardRotation) private var rotationDegrees
+    @Environment(\.cardRotationMapper) private var rotationMapper
+    @Environment(\.cardScale) private var scaleFactor
+    @Environment(\.cardScaleMapper) private var scaleMapper
     
-    // Mapping functions for more complex transformations
-    var overlapMapper: (Int, Int) -> CGFloat = { _, _ in 1 }
-    var rotationMapper: (Int, Int) -> Double = { _, _ in 1 }
-    var scaleMapper: (Int, Int) -> Double = { _, _ in 1 }
-    
-    /// Determines the size of the layout container
+    /// Calculate the size needed for the layout
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         guard !subviews.isEmpty else { return .zero }
         
@@ -79,218 +118,138 @@ struct CardStackLayout: Layout {
         return CGSize(width: maxSize.width, height: totalHeight)
     }
     
-    /// Places the subviews within the layout
+    /// Position the subviews with effects applied
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         guard !subviews.isEmpty else { return }
         
         let totalCount = subviews.count
         
-        // Place each subview with the appropriate effects
+        // Apply z-index to ensure proper stacking order
         for (index, subview) in subviews.enumerated() {
+            // Calculate z-index (higher index = further back in stack)
+            let zIndex = Double(totalCount - index)
+            
+            // Position the subview
             let size = subview.sizeThatFits(.unspecified)
             
-            // Calculate the position (centered horizontally)
+            // Center horizontally, position vertically based on overlap
             var point = CGPoint(
                 x: bounds.midX - size.width/2,
                 y: bounds.minY
             )
             
-            // Apply overlap effect
+            // Apply overlap based on mapping function
             if overlapAmount > 0 {
                 let yOffset = overlapAmount * overlapMapper(index, totalCount)
                 point.y += yOffset
             }
             
-            // Place the view
-            subview.place(at: point, anchor: .topLeading, proposal: .unspecified)
+            // Place the view with proposal and anchor
+            subview.place(
+                at: point,
+                anchor: .topLeading,
+                proposal: .unspecified
+            )
             
-            // Apply 3D rotation and scaling transformations
-            if rotationDegrees != 0 || scaleFactor != 0 {
-                let rotation = rotationDegrees * rotationMapper(index, totalCount)
-                let scale = scaleFactor > 0 ? 1.0 - (scaleFactor * scaleMapper(index, totalCount)) : 1.0
-                
-                // We would apply these transforms here if this was a real implementation
-                // Since we can't directly modify the transform in Layout, we'll use 
-                // modifier extensions to apply them after placement
-            }
+            // 3D rotation and scaling are applied through transform effects
+            // We can't directly apply them in the layout, so they'll be handled
+            // by modifiers on the subviews in the ContentUnavailableView
         }
     }
 }
 
-// MARK: - Stack Layout Modifiers
+// MARK: - Effect Modifiers
 
-extension CardStackLayout {
-    /// Applies vertical overlap effect to the card stack
-    func cardOverlap(
-        amount: CGFloat = 20,
-        mapper: @escaping (Int, Int) -> CGFloat = { index, _ in CGFloat(index) }
-    ) -> CardStackLayout {
-        var layout = self
-        layout.overlapAmount = amount
-        layout.overlapMapper = mapper
-        return layout
-    }
+/// Modifier to set card overlap amount
+struct CardOverlapModifier: ViewModifier {
+    let amount: CGFloat
+    let mapper: (Int, Int) -> CGFloat
     
-    /// Applies 3D rotation effect to the card stack
-    func cardRotation(
-        degrees: Double = 5,
-        mapper: @escaping (Int, Int) -> Double = { index, _ in Double(index) }
-    ) -> CardStackLayout {
-        var layout = self
-        layout.rotationDegrees = degrees
-        layout.rotationMapper = mapper
-        return layout
-    }
-    
-    /// Applies scaling effect to the card stack
-    func cardScaling(
-        factor: Double = 0.05,
-        mapper: @escaping (Int, Int) -> Double = { index, _ in Double(index) }
-    ) -> CardStackLayout {
-        var layout = self
-        layout.scaleFactor = factor
-        layout.scaleMapper = mapper
-        return layout
+    func body(content: Content) -> some View {
+        content
+            .environment(\.cardOverlap, amount)
+            .environment(\.cardOverlapMapper, mapper)
     }
 }
 
-// MARK: - View Modifiers for 3D Effects
-
-/// Applies 3D rotation effect to a view
-struct Card3DEffectModifier: ViewModifier {
-    let index: Int
-    let count: Int
+/// Modifier to set card rotation amount
+struct CardRotationModifier: ViewModifier {
     let degrees: Double
     let mapper: (Int, Int) -> Double
     
     func body(content: Content) -> some View {
-        let rotation = degrees * mapper(index, count)
-        return content
-            .rotation3DEffect(
-                .degrees(rotation),
-                axis: (x: 1.0, y: 0, z: 0),
-                anchor: .bottom,
-                perspective: 0.5
-            )
+        content
+            .environment(\.cardRotation, degrees)
+            .environment(\.cardRotationMapper, mapper)
     }
 }
 
-/// Applies scaling effect to a view
-struct CardScalingEffectModifier: ViewModifier {
-    let index: Int
-    let count: Int
+/// Modifier to set card scaling amount
+struct CardScalingModifier: ViewModifier {
     let factor: Double
     let mapper: (Int, Int) -> Double
     
     func body(content: Content) -> some View {
-        let scale = 1.0 - (factor * mapper(index, count))
-        return content.scaleEffect(scale, anchor: .bottom)
+        content
+            .environment(\.cardScale, factor)
+            .environment(\.cardScaleMapper, mapper)
     }
 }
 
-/// Helper extension for applying effects 
+// MARK: - View Extensions
+
 extension View {
-    /// Applies 3D rotation effect
-    func card3DEffect(
-        index: Int,
-        count: Int,
-        degrees: Double,
-        mapper: @escaping (Int, Int) -> Double
+    /// Sets the overlap amount for cards in a CardStackLayout
+    func cardStackOverlap(
+        _ amount: CGFloat = 20,
+        mapper: @escaping (Int, Int) -> CGFloat = { index, _ in CGFloat(index) }
     ) -> some View {
-        self.modifier(Card3DEffectModifier(
-            index: index,
-            count: count,
-            degrees: degrees,
-            mapper: mapper
-        ))
+        modifier(CardOverlapModifier(amount: amount, mapper: mapper))
     }
     
-    /// Applies scaling effect
-    func cardScalingEffect(
-        index: Int,
-        count: Int,
-        factor: Double,
-        mapper: @escaping (Int, Int) -> Double
+    /// Sets the rotation amount for cards in a CardStackLayout
+    func cardStackRotation(
+        _ degrees: Double = 5,
+        mapper: @escaping (Int, Int) -> Double = { index, _ in Double(index) }
     ) -> some View {
-        self.modifier(CardScalingEffectModifier(
-            index: index,
-            count: count,
-            factor: factor,
-            mapper: mapper
-        ))
+        modifier(CardRotationModifier(degrees: degrees, mapper: mapper))
+    }
+    
+    /// Sets the scaling factor for cards in a CardStackLayout
+    func cardStackScaling(
+        _ factor: Double = 0.05,
+        mapper: @escaping (Int, Int) -> Double = { index, _ in Double(index) }
+    ) -> some View {
+        modifier(CardScalingModifier(factor: factor, mapper: mapper))
     }
 }
 
-// MARK: - ViewBuilder Extensions
+// MARK: - Task Stack View
 
-/// CardStack container that combines layout with transformations
-struct CardStack<Content: View>: View {
-    let content: () -> Content
+/// A simple stack view for displaying tasks
+/// 
+/// This view is completely independent from any visual effects or transformations.
+/// It simply displays tasks using the CardStackLayout.
+struct TaskStackView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query private var tasks: [Task]
     
-    var overlapAmount: CGFloat = 0
-    var rotationDegrees: Double = 0
-    var scaleFactor: Double = 0
-    
-    var overlapMapper: (Int, Int) -> CGFloat = { index, _ in CGFloat(index) }
-    var rotationMapper: (Int, Int) -> Double = { index, _ in Double(index) }
-    var scaleMapper: (Int, Int) -> Double = { index, _ in Double(index) }
-    
-    init(@ViewBuilder content: @escaping () -> Content) {
-        self.content = content
+    init() {
+        _tasks = Query(sort: [
+            SortDescriptor(\Task.order, order: .forward),
+            SortDescriptor(\Task.createdAt, order: .forward)
+        ])
     }
     
     var body: some View {
-        if #available(iOS 16.0, macOS 13.0, *) {
-            // On iOS 16+ and macOS 13+, use the built-in Layout system
-            CardStackLayout()
-                .cardOverlap(amount: overlapAmount, mapper: overlapMapper)
-                .cardRotation(degrees: rotationDegrees, mapper: rotationMapper)
-                .cardScaling(factor: scaleFactor, mapper: scaleMapper)
-            {
-                content()
-            }
-        } else {
-            // On older systems, fall back to a ZStack with manual transforms
-            ZStack {
-                // Implementation for older OS versions would go here
-                content()
+        CardStackLayout {
+            ForEach(tasks) { task in
+                TaskCardView(task: task) {
+                    task.isCompleted.toggle()
+                }
             }
         }
-    }
-    
-    // MARK: - Fluent API
-    
-    /// Applies overlap effect to the card stack
-    func cardOverlap(
-        amount: CGFloat = 20,
-        mapper: @escaping (Int, Int) -> CGFloat = { index, _ in CGFloat(index) }
-    ) -> CardStack<Content> {
-        var stack = self
-        stack.overlapAmount = amount
-        stack.overlapMapper = mapper
-        return stack
-    }
-    
-    /// Applies 3D rotation effect to the card stack
-    func cardRotation(
-        degrees: Double = 5,
-        mapper: @escaping (Int, Int) -> Double = { index, _ in Double(index) }
-    ) -> CardStack<Content> {
-        var stack = self
-        stack.rotationDegrees = degrees
-        stack.rotationMapper = mapper
-        return stack
-    }
-    
-    /// Applies scaling effect to the card stack
-    func cardScaling(
-        factor: Double = 0.05,
-        mapper: @escaping (Int, Int) -> Double = { index, _ in Double(index) }
-    ) -> CardStack<Content> {
-        var stack = self
-        stack.scaleFactor = factor
-        stack.scaleMapper = mapper
-        return stack
+        .padding()
     }
 }
 
@@ -305,81 +264,52 @@ struct TaskStackViewPreviews: View {
                     Label("Basic", systemImage: "list.bullet")
                 }
             
-            // Using CardStack container with overlap effect
-            CardStack {
-                ForEach(0..<5, id: \.self) { index in
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.blue.opacity(0.8 - Double(index) * 0.1))
-                        .frame(width: 300, height: 200)
+            // Simple overlap effect
+            TaskStackView()
+                .cardStackOverlap(20)
+                .tabItem {
+                    Label("Overlap", systemImage: "square.stack")
                 }
-            }
-            .cardOverlap(amount: 20)
-            .tabItem {
-                Label("Overlap", systemImage: "square.stack")
-            }
             
             // With rotation
-            CardStack {
-                ForEach(0..<5, id: \.self) { index in
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.green.opacity(0.8 - Double(index) * 0.1))
-                        .frame(width: 300, height: 200)
+            TaskStackView()
+                .cardStackOverlap(20)
+                .cardStackRotation(-5)
+                .tabItem {
+                    Label("Rotation", systemImage: "rotate.3d")
                 }
-            }
-            .cardOverlap(amount: 20)
-            .cardRotation(degrees: -5)
-            .tabItem {
-                Label("Rotation", systemImage: "rotate.3d")
-            }
             
             // With scaling
-            CardStack {
-                ForEach(0..<5, id: \.self) { index in
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.orange.opacity(0.8 - Double(index) * 0.1))
-                        .frame(width: 300, height: 200)
+            TaskStackView()
+                .cardStackOverlap(20)
+                .cardStackScaling(0.05)
+                .tabItem {
+                    Label("Scaling", systemImage: "plus.forwardslash.minus")
                 }
-            }
-            .cardOverlap(amount: 20)
-            .cardScaling(factor: 0.05)
-            .tabItem {
-                Label("Scaling", systemImage: "plus.forwardslash.minus")
-            }
             
             // Custom mapping function
-            CardStack {
-                ForEach(0..<5, id: \.self) { index in
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.purple.opacity(0.8 - Double(index) * 0.1))
-                        .frame(width: 300, height: 200)
+            TaskStackView()
+                .cardStackOverlap(25) { index, count in
+                    // Non-linear spacing - cards closer at the top
+                    CGFloat(index) * (1.5 - CGFloat(index) / CGFloat(count) * 0.5)
                 }
-            }
-            .cardOverlap(amount: 25) { index, count in
-                // Non-linear spacing
-                CGFloat(index) * (1.5 - CGFloat(index) / CGFloat(count) * 0.5)
-            }
-            .tabItem {
-                Label("Custom", systemImage: "square.stack.3d")
-            }
+                .tabItem {
+                    Label("Custom", systemImage: "square.stack.3d")
+                }
             
             // Combined effects
-            CardStack {
-                ForEach(0..<5, id: \.self) { index in
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.red.opacity(0.8 - Double(index) * 0.1))
-                        .frame(width: 300, height: 200)
+            TaskStackView()
+                .cardStackOverlap(30)
+                .cardStackRotation(-2)
+                .cardStackScaling(0.05)
+                .tabItem {
+                    Label("Combined", systemImage: "sparkles")
                 }
-            }
-            .cardOverlap(amount: 30)
-            .cardRotation(degrees: -2)
-            .cardScaling(factor: 0.05)
-            .tabItem {
-                Label("Combined", systemImage: "sparkles")
-            }
         }
     }
 }
 
 #Preview("Card Stack Options") {
     TaskStackViewPreviews()
+        .modelContainer(TaskMockData.createPreviewContainer())
 }
