@@ -16,16 +16,11 @@ struct AddTaskButtonView: View {
         Button {
             showingAddTask = true
         } label: {
-            Image(systemName: "plus")
-                .font(.footnote)
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
-                .frame(width: 28, height: 28)
-                .background(
-                    Circle()
-                        .fill(color)
-                )
+            SharpPlus(size: 24)          // tailor size here
+                .padding(16)             // ≥ 44×44 tap target
         }
+        .buttonStyle(.plain)             // no default shading/tint
+        .contentShape(Rectangle())
     }
 }
 
@@ -118,6 +113,32 @@ struct AddTaskView: View {
             print("Error fetching next order: \(error)")
             return 0
         }
+    }
+}
+
+/// A crisp, solid “+” icon whose tips are square.
+struct SharpPlus: View {
+    /// Overall edge length of the plus (outside to outside).
+    var size: CGFloat = 24
+    /// Thickness of each arm. 1⁄6 of the size is a pleasing default.
+    var thickness: CGFloat { size / 6 }
+    /// Fill colour of the symbol.
+    var color: Color = .black
+    
+    var body: some View {
+        ZStack {
+            // Vertical bar
+            Rectangle()
+                .fill(color)
+                .frame(width: thickness, height: size)
+            // Horizontal bar
+            Rectangle()
+                .fill(color)
+                .frame(width: size, height: thickness)
+        }
+        // Keep the drawing centred inside any parent frame
+        .frame(width: size, height: size)
+        .accessibilityLabel(Text("Add"))
     }
 }
 
