@@ -47,6 +47,18 @@ struct CompletedTaskView: View {
         }
     }
     
+    // Computed property for the title based on category
+    private var categoryTitle: String {
+        switch category {
+        case .required:
+            return "Completed Required Tasks"
+        case .suggested:
+            return "Completed Suggested Tasks"
+        case nil:
+            return "All Completed Tasks"
+        }
+    }
+    
     var body: some View {
         ZStack(alignment: .topTrailing) {
             // Translucent blurred background
@@ -66,9 +78,10 @@ struct CompletedTaskView: View {
             
             VStack(spacing: 20) {
                 // Title
-                Text("Completed Tasks")
+                Text(categoryTitle)
                     .font(.largeTitle)
                     .fontWeight(.bold)
+                    .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.top, 40)
                 
                 if completedTasks.isEmpty {
@@ -76,6 +89,7 @@ struct CompletedTaskView: View {
                     Text("No completed tasks")
                         .font(.title2)
                         .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
                     Spacer()
                 } else {
                     // Tasks stack
