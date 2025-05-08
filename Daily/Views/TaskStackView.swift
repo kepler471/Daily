@@ -112,6 +112,9 @@ struct TaskStackView: View {
     // Track tasks that should be removed after completion
     @State private var tasksToRemove: Set<ObjectIdentifier> = []
     
+    // Track whether we're in a repositioning animation
+    @State private var isRepositioning: Bool = false
+    
     // MARK: - ZStack
     var body: some View {
         // Reset the removed tasks when tasks change
@@ -126,6 +129,8 @@ struct TaskStackView: View {
             }
         }
         .padding()
+        // This animation helps with the overall stack repositioning
+        .animation(isRepositioning ? .spring(response: 0.7, dampingFraction: 0.7) : nil, value: tasks.count)
         .onChange(of: tasks) { oldValue, newValue in
             // Reset the removal tracking when tasks change
             // This ensures we don't accidentally hide new tasks
@@ -188,16 +193,30 @@ struct TaskStackView: View {
                     tasksToRemove.insert(ObjectIdentifier(task))
                 }
                 
-                // Delay the actual model update slightly to allow animation to start
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    // Now update the model
-                    task.isCompleted = newCompletionState
+                // Prepare for smooth repositioning of other tasks
+                // Delay repositioning slightly to allow the task to start its completion animation first
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    // Enable repositioning animation
+                    withAnimation {
+                        isRepositioning = true
+                    }
                     
-                    // Try to save the changes
-                    do {
-                        try modelContext.save()
-                    } catch {
-                        print("Error saving task completion state: \(error.localizedDescription)")
+                    // Delay the actual model update slightly to allow animation to start
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        // Now update the model
+                        task.isCompleted = newCompletionState
+                        
+                        // Try to save the changes
+                        do {
+                            try modelContext.save()
+                        } catch {
+                            print("Error saving task completion state: \(error.localizedDescription)")
+                        }
+                        
+                        // After the task has been completed and saved, we can reset the repositioning flag
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                            isRepositioning = false
+                        }
                     }
                 }
             } else {
@@ -229,6 +248,11 @@ struct TaskStackView: View {
         .animation(.easeOut(duration: 0.2), value: hoveredTaskIndex)
         // Animation for completion state changes
         .animation(.easeOut(duration: 0.7), value: task.isCompleted)
+        // Animation for repositioning
+        .animation(isRepositioning ? 
+                  .spring(response: 0.6, dampingFraction: 0.7, blendDuration: 0.3) : 
+                  nil, 
+                  value: index)
     }
     
     // MARK: - Hover
