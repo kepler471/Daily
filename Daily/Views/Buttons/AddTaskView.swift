@@ -145,5 +145,4 @@ struct SharpPlus: View {
 #Preview {
     AddTaskButtonView(showingAddTask: .constant(false))
         .padding()
-        .previewLayout(.sizeThatFits)
 }

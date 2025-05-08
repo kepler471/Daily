@@ -83,17 +83,17 @@ extension ModelContext {
     
     /// Count tasks in a specific category or all categories if nil
     func countTasks(category: TaskCategory? = nil) throws -> Int {
-        var descriptor = FetchDescriptor<Task>(predicate: Task.Predicates.byCategory(category))
+        let descriptor = FetchDescriptor<Task>(predicate: Task.Predicates.byCategory(category))
         return try fetchCount(descriptor)
     }
     
     /// Count incomplete tasks in a specific category or all categories if nil
     func countIncompleteTasks(category: TaskCategory? = nil) throws -> Int {
         if let category = category {
-            var descriptor = FetchDescriptor<Task>(predicate: Task.Predicates.byCategoryAndCompletion(category: category, isCompleted: false))
+            let descriptor = FetchDescriptor<Task>(predicate: Task.Predicates.byCategoryAndCompletion(category: category, isCompleted: false))
             return try fetchCount(descriptor)
         } else {
-            var descriptor = FetchDescriptor<Task>(predicate: Task.Predicates.byCompletion(isCompleted: false))
+            let descriptor = FetchDescriptor<Task>(predicate: Task.Predicates.byCompletion(isCompleted: false))
             return try fetchCount(descriptor)
         }
     }
@@ -101,10 +101,10 @@ extension ModelContext {
     /// Count completed tasks in a specific category or all categories if nil
     func countCompletedTasks(category: TaskCategory? = nil) throws -> Int {
         if let category = category {
-            var descriptor = FetchDescriptor<Task>(predicate: Task.Predicates.byCategoryAndCompletion(category: category, isCompleted: true))
+            let descriptor = FetchDescriptor<Task>(predicate: Task.Predicates.byCategoryAndCompletion(category: category, isCompleted: true))
             return try fetchCount(descriptor)
         } else {
-            var descriptor = FetchDescriptor<Task>(predicate: Task.Predicates.byCompletion(isCompleted: true))
+            let descriptor = FetchDescriptor<Task>(predicate: Task.Predicates.byCompletion(isCompleted: true))
             return try fetchCount(descriptor)
         }
     }

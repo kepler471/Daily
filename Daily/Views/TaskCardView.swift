@@ -128,6 +128,5 @@ struct TaskCardView: View {
     
     return TaskCardView(task: task, onToggleComplete: {})
         .frame(width: 350)
-        .previewLayout(.sizeThatFits)
         .padding()
 }
