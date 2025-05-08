@@ -29,38 +29,45 @@ struct MainView: View {
             // Fixed top control bar
             VStack(spacing: 0) {
                 HStack(spacing: 0) {
-                    // Add button and reset at far left
-                    HStack(spacing: 12) {
-                        // Add task button
-                        AddTaskButtonView(showingAddTask: $showingAddTask, color: .purple)
-                            
-                        #if DEBUG
-                        ResetDataView()
-                        #endif
-                    }
-                    .padding(.trailing, 20)
-                    
-                    // Required column
+                    // Left half
                     HStack {
+                        // Add button and reset at left
+                        HStack(spacing: 12) {
+                            // Add task button
+                            AddTaskButtonView(showingAddTask: $showingAddTask, color: .purple)
+                                
+                            #if DEBUG
+                            ResetDataView()
+                            #endif
+                        }
+                        
+                        Spacer()
+                        
+                        // Required category title centered in left half
                         Text("Required")
                             .font(.headline)
                             .foregroundColor(.primary)
                         
                         Spacer()
                         
+                        // Counter right aligned
                         TaskCounterView(category: .required)
                     }
                     .frame(minWidth: 0, maxWidth: .infinity)
                     .padding(.horizontal)
                     
-                    // Suggested column
+                    // Right half
                     HStack {
+                        Spacer()
+                        
+                        // Suggested category title centered in right half
                         Text("Suggested")
                             .font(.headline)
                             .foregroundColor(.primary)
                         
                         Spacer()
                         
+                        // Counter right aligned
                         TaskCounterView(category: .suggested)
                     }
                     .frame(minWidth: 0, maxWidth: .infinity)
