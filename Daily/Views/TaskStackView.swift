@@ -189,7 +189,7 @@ struct TaskStackView: View {
             if newCompletionState {
                 // For completion animation, insert into removal set before updating model
                 // This preserves the animation even if the model refreshes
-                withAnimation(.easeOut(duration: 1.0).delay(0.3)) {
+                _ = withAnimation(.easeOut(duration: 1.0).delay(0.3)) {
                     tasksToRemove.insert(ObjectIdentifier(task))
                 }
                 
