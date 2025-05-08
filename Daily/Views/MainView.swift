@@ -10,86 +10,71 @@ import SwiftData
 
 struct MainView: View {
     @Environment(\.modelContext) private var modelContext
-    @State private var showingAddRequiredTask = false
-    @State private var showingAddSuggestedTask = false
+    @State private var showingAddTask = false
     
     var body: some View {
-        HStack(spacing: 0) {
-            // Required Tasks Column
-            VStack(spacing: 0) {
-                // Top row with add button, trash button, and counter
-                HStack {
-                    HStack(spacing: 12) {
-                        // Add task button
-                        AddTaskButtonView(showingAddTask: $showingAddRequiredTask, color: .blue)
-                        
-                        #if DEBUG
-                        ResetDataView()
-                        #endif
-                    }
-                    
-                    Spacer()
-                    
-                    Text("Required")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    
-                    Spacer()
-                    
-                    // Task counter
-                    TaskCounterView(category: .required)
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 8)
-                
-                // Task cards container with overlapping effect
+        ZStack(alignment: .top) {
+            // Main content with task columns
+            HStack(spacing: 0) {
+                // Required Tasks Column
                 TaskStackView(category: .required, verticalOffset: 20, scale: 0.85)
+                    .frame(minWidth: 0, maxWidth: .infinity)
+                
+                // Suggested Tasks Column
+                TaskStackView(category: .suggested, verticalOffset: 20, scale: 0.85)
+                    .frame(minWidth: 0, maxWidth: .infinity)
             }
-            .frame(minWidth: 0, maxWidth: .infinity)
-            .background(Color.blue.opacity(0.05))
+            .padding(.top, 200)  // Space for the fixed control bar and fan-out space
             
-            // Divider between columns
-            Divider()
-                .background(Color.gray.opacity(0.3))
-            
-            // Suggested Tasks Column
+            // Fixed top control bar
             VStack(spacing: 0) {
-                // Top row with add button, trash button, and counter
-                HStack {
+                HStack(spacing: 0) {
+                    // Add button and reset at far left
                     HStack(spacing: 12) {
                         // Add task button
-                        AddTaskButtonView(showingAddTask: $showingAddSuggestedTask, color: .green)
-                        
+                        AddTaskButtonView(showingAddTask: $showingAddTask, color: .purple)
+                            
                         #if DEBUG
                         ResetDataView()
                         #endif
                     }
+                    .padding(.trailing, 20)
                     
-                    Spacer()
+                    // Required column
+                    HStack {
+                        Text("Required")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        TaskCounterView(category: .required)
+                    }
+                    .frame(minWidth: 0, maxWidth: .infinity)
+                    .padding(.horizontal)
                     
-                    Text("Suggested")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    
-                    Spacer()
-                    
-                    // Task counter
-                    TaskCounterView(category: .suggested)
+                    // Suggested column
+                    HStack {
+                        Text("Suggested")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        TaskCounterView(category: .suggested)
+                    }
+                    .frame(minWidth: 0, maxWidth: .infinity)
+                    .padding(.horizontal)
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 8)
+                .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
                 
-                // Task cards container with custom offset based on index
-                TaskStackView(category: .suggested, verticalOffset: 20, scale: 0.85)
+                Spacer()
             }
-            .frame(minWidth: 0, maxWidth: .infinity)
-            .background(Color.green.opacity(0.05))
         }
-        .sheet(isPresented: $showingAddRequiredTask) {
-            AddTaskView(category: .required)
-        }
-        .sheet(isPresented: $showingAddSuggestedTask) {
-            AddTaskView(category: .suggested)
+        .sheet(isPresented: $showingAddTask) {
+            AddTaskView()
         }
     }
 }
@@ -107,3 +92,4 @@ struct MainView: View {
         .modelContainer(TaskMockData.createPreviewContainer())
         .frame(width: 800, height: 600)
 }
+

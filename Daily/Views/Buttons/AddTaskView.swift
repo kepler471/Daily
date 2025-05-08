@@ -33,9 +33,8 @@ struct AddTaskView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     
-    let category: TaskCategory
-    
     @State private var title = ""
+    @State private var selectedCategory: TaskCategory = .required
     @State private var hasScheduledTime = false
     @State private var scheduledTime = Date()
     
@@ -44,6 +43,13 @@ struct AddTaskView: View {
             Form {
                 Section("Task Details") {
                     TextField("Title", text: $title)
+                    
+                    Picker("Category", selection: $selectedCategory) {
+                        Text("Required").tag(TaskCategory.required)
+                        Text("Suggested").tag(TaskCategory.suggested)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.vertical, 4)
                     
                     Toggle("Schedule Time", isOn: $hasScheduledTime)
                     
@@ -63,12 +69,12 @@ struct AddTaskView: View {
                     .padding(.vertical, 10)
                     .background(
                         RoundedRectangle(cornerRadius: 10)
-                            .fill(title.isEmpty ? Color.gray : category == .required ? Color.blue : Color.green)
+                            .fill(title.isEmpty ? Color.gray : selectedCategory == .required ? Color.blue : Color.green)
                     )
                     .buttonStyle(.plain)
                 }
             }
-            .navigationTitle("New \(category.rawValue.capitalized) Task")
+            .navigationTitle("New Task")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
@@ -88,7 +94,7 @@ struct AddTaskView: View {
             let newTask = Task(
                 title: title,
                 order: getNextOrder(),
-                category: category,
+                category: selectedCategory,
                 scheduledTime: hasScheduledTime ? scheduledTime : nil
             )
             modelContext.insert(newTask)
@@ -97,7 +103,7 @@ struct AddTaskView: View {
     
     private func getNextOrder() -> Int {
         do {
-            let categoryString = category.rawValue
+            let categoryString = selectedCategory.rawValue
             var descriptor = FetchDescriptor<Task>(
                 sortBy: [SortDescriptor(\Task.order, order: .reverse)]
             )

@@ -198,21 +198,26 @@ struct TaskStackView: View {
         
         // Calculate total height of the fan and center it
         let fanHeight = cardSpacing * CGFloat(totalCards - 1)
-//        let basePosition = positionFactor * (fanHeight / 2.0)
         
-        // Add a tiny gap between perfectly adjacent cards in odd-length stacks to help hover aetection
+        // Adjust positions to ensure proper overlap and hover detection
         let middleIndex = Int(floor(Double(tasks.count - 1) / 2.0))
         let isOddCount = tasks.count % 2 != 0
         
         var basePosition = positionFactor * (fanHeight / 2.0)
         
-        // Add a tiny offset to the middle card in odd-length stacks
-        if isOddCount && index == middleIndex {
-            basePosition += 2.0 // Just enough to break symmetry but not visually aoticeable
+        // For odd counts, create a larger gap around the middle card
+        if isOddCount {
+            if index == middleIndex {
+                // Middle card gets a slight vertical adjustment
+                basePosition += 5.0
+            } else if index > middleIndex {
+                // Cards below the middle get pushed down slightly more
+                basePosition += 10.0
+            }
         }
         
         // Apply a small offset for the hovered card to make it stand out
-        let hoverBonus: CGFloat = (hoveredTaskIndex == index) ? -5 : 0
+        let hoverBonus: CGFloat = (hoveredTaskIndex == index) ? -10 : 0
         
         return basePosition + hoverBonus
     }
