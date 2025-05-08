@@ -7,10 +7,12 @@
 
 import SwiftUI
 import SwiftData
+import AppKit
 
 @main
 struct DailyApp: App {
     @StateObject private var taskResetManager: TaskResetManager
+    @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
     
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -61,13 +63,38 @@ struct DailyApp: App {
         
         // Initialize the state object
         _taskResetManager = StateObject(wrappedValue: manager)
+        
+        // Initialize the app delegate with necessary dependencies
+        _appDelegate = NSApplicationDelegateAdaptor(AppDelegate.self)
+    }
+    
+    // Make sure the app delegate has access to the model container and task reset manager
+    func onAppear() {
+        appDelegate.modelContainer = sharedModelContainer
+        appDelegate.taskResetManager = taskResetManager
+        
+        // Configure the popover with the model context after we've passed the dependencies
+        appDelegate.setupPopoverWithContext()
     }
 
     var body: some Scene {
+        // This is a menu bar app, so we don't need a visible window on launch
+        // The AppDelegate will handle setting up the menu bar
         WindowGroup {
             MainView()
                 .environmentObject(taskResetManager) // Make available throughout the app
+                // Hide the window at startup and let the menu bar handle it
+                .hidden()
+                .onAppear {
+                    onAppear()
+                }
         }
         .modelContainer(sharedModelContainer)
+        // Disable the default window title bar and hide the window by default
+        .windowStyle(.hiddenTitleBar)
+        .commands {
+            // Remove the default window menu 
+            CommandGroup(replacing: .newItem) { }
+        }
     }
 }
