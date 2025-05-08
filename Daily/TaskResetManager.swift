@@ -88,6 +88,7 @@ class TaskResetManager: ObservableObject {
         do {
             // Fetch all completed tasks
             let completedTasks = try modelContext.fetchCompletedTasks()
+            let count = completedTasks.count
             
             // Mark each as incomplete
             for task in completedTasks {
@@ -97,7 +98,16 @@ class TaskResetManager: ObservableObject {
             // Save changes
             try modelContext.save()
             
-            print("Successfully reset \(completedTasks.count) tasks at \(Date().formatted(date: .abbreviated, time: .standard))")
+            // Notify observers of the change
+            objectWillChange.send()
+            
+            // Add a small delay to ensure UI is updated
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                // This notification triggers UI updates
+                NotificationCenter.default.post(name: NSNotification.Name("TasksResetNotification"), object: nil)
+            }
+            
+            print("Successfully reset \(count) tasks at \(Date().formatted(date: .abbreviated, time: .standard))")
         } catch {
             print("Failed to reset tasks: \(error.localizedDescription)")
         }

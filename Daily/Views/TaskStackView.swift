@@ -33,13 +33,24 @@ struct TaskStackView: View {
         self.scaleAmount = scale
         self.category = category
         
-        _tasks = Query(
-            filter: Task.Predicates.byCategory(category),
-            sort: [
-                SortDescriptor(\Task.order, order: .forward),
-                SortDescriptor(\Task.createdAt, order: .forward)
-            ]
-        )
+        // Use a combined predicate to get only incomplete tasks for this category
+        if let category = category {
+            _tasks = Query(
+                filter: Task.Predicates.byCategoryAndCompletion(category: category, isCompleted: false),
+                sort: [
+                    SortDescriptor(\Task.order, order: .forward),
+                    SortDescriptor(\Task.createdAt, order: .forward)
+                ]
+            )
+        } else {
+            _tasks = Query(
+                filter: Task.Predicates.byCompletion(isCompleted: false),
+                sort: [
+                    SortDescriptor(\Task.order, order: .forward),
+                    SortDescriptor(\Task.createdAt, order: .forward)
+                ]
+            )
+        }
     }
     
     /// Initialize with a function mapping index to offset and optional scale
@@ -50,13 +61,24 @@ struct TaskStackView: View {
         self.scaleAmount = scale
         self.category = category
         
-        _tasks = Query(
-            filter: Task.Predicates.byCategory(category),
-            sort: [
-                SortDescriptor(\Task.order, order: .forward),
-                SortDescriptor(\Task.createdAt, order: .forward)
-            ]
-        )
+        // Use a combined predicate to get only incomplete tasks for this category
+        if let category = category {
+            _tasks = Query(
+                filter: Task.Predicates.byCategoryAndCompletion(category: category, isCompleted: false),
+                sort: [
+                    SortDescriptor(\Task.order, order: .forward),
+                    SortDescriptor(\Task.createdAt, order: .forward)
+                ]
+            )
+        } else {
+            _tasks = Query(
+                filter: Task.Predicates.byCompletion(isCompleted: false),
+                sort: [
+                    SortDescriptor(\Task.order, order: .forward),
+                    SortDescriptor(\Task.createdAt, order: .forward)
+                ]
+            )
+        }
     }
     
     /// Initialize with functions for both offset and scale
@@ -67,13 +89,24 @@ struct TaskStackView: View {
         self.scaleAmount = 1.0 // Not used in this initialization
         self.category = category
         
-        _tasks = Query(
-            filter: Task.Predicates.byCategory(category),
-            sort: [
-                SortDescriptor(\Task.order, order: .forward),
-                SortDescriptor(\Task.createdAt, order: .forward)
-            ]
-        )
+        // Use a combined predicate to get only incomplete tasks for this category
+        if let category = category {
+            _tasks = Query(
+                filter: Task.Predicates.byCategoryAndCompletion(category: category, isCompleted: false),
+                sort: [
+                    SortDescriptor(\Task.order, order: .forward),
+                    SortDescriptor(\Task.createdAt, order: .forward)
+                ]
+            )
+        } else {
+            _tasks = Query(
+                filter: Task.Predicates.byCompletion(isCompleted: false),
+                sort: [
+                    SortDescriptor(\Task.order, order: .forward),
+                    SortDescriptor(\Task.createdAt, order: .forward)
+                ]
+            )
+        }
     }
     
     // Track tasks that should be removed after completion
@@ -86,6 +119,7 @@ struct TaskStackView: View {
         ZStack {
             ForEach(Array(tasks.enumerated()), id: \.element.id) { index, task in
                 // Only show tasks that aren't marked for removal
+                // Let the animation handle tasks being completed
                 if !tasksToRemove.contains(ObjectIdentifier(task)) {
                     taskCardView(for: task, at: index)
                 }
@@ -96,6 +130,20 @@ struct TaskStackView: View {
             // Reset the removal tracking when tasks change
             // This ensures we don't accidentally hide new tasks
             tasksToRemove.removeAll()
+        }
+        // Add another onChange handler specifically for task completion status
+        .onChange(of: tasks.map(\.isCompleted)) { oldValue, newValue in
+            // Clear tasksToRemove when completion status changes from an external source
+            if oldValue != newValue {
+                tasksToRemove.removeAll()
+            }
+        }
+        // Listen for task reset notifications
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("TasksResetNotification"))) { _ in
+            // When tasks are reset, clear the removal tracking
+            withAnimation {
+                tasksToRemove.removeAll()
+            }
         }
     }
     
@@ -129,18 +177,40 @@ struct TaskStackView: View {
             calculateYOffset(for: index)
             
         return TaskCardView(task: task) {
-            // Toggle completion state
-            task.isCompleted.toggle()
+            // Set completion state first for animation
+            let newCompletionState = !task.isCompleted
             
-            // Handle task completion state change
-            if task.isCompleted {
-                // When a task is completed, it will animate upward and fade out
-                _ = withAnimation(.easeOut(duration: 1.0).delay(0.3)) {
+            // Start animation first, then update model
+            if newCompletionState {
+                // For completion animation, insert into removal set before updating model
+                // This preserves the animation even if the model refreshes
+                withAnimation(.easeOut(duration: 1.0).delay(0.3)) {
                     tasksToRemove.insert(ObjectIdentifier(task))
                 }
+                
+                // Delay the actual model update slightly to allow animation to start
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    // Now update the model
+                    task.isCompleted = newCompletionState
+                    
+                    // Try to save the changes
+                    do {
+                        try modelContext.save()
+                    } catch {
+                        print("Error saving task completion state: \(error.localizedDescription)")
+                    }
+                }
             } else {
-                // If task was reopened, make sure it's not in the removal set
+                // For reopening, update model immediately
+                task.isCompleted = newCompletionState
                 tasksToRemove.remove(ObjectIdentifier(task))
+                
+                // Try to save the changes
+                do {
+                    try modelContext.save()
+                } catch {
+                    print("Error saving task completion state: \(error.localizedDescription)")
+                }
             }
         }
         // Apply positioning and visual effects

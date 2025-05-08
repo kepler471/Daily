@@ -183,10 +183,22 @@ struct CompletedTaskView: View {
     }
     
     private func toggleTaskCompletion(_ task: Task) {
+        // Toggle task completion state
         task.isCompleted.toggle()
         
         do {
+            // Save the changes to the model
             try modelContext.save()
+            
+            // Add a small delay to allow the UI to update
+            // This helps the SwiftData change notifications propagate
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                // This is just to trigger a UI refresh
+                // The actual task toggling already happened above
+                withAnimation {
+                    // No need to do anything here - just triggering a refresh
+                }
+            }
         } catch {
             print("Error toggling task completion: \(error.localizedDescription)")
         }
