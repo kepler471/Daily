@@ -8,6 +8,7 @@
 import SwiftUI
 import SwiftData
 
+// MARK: - TaskStackView
 struct TaskStackView: View {
     // Data source
     @Environment(\.modelContext) private var modelContext
@@ -78,6 +79,7 @@ struct TaskStackView: View {
     // Track tasks that should be removed after completion
     @State private var tasksToRemove: Set<ObjectIdentifier> = []
     
+    // MARK: - ZStack
     var body: some View {
         // Reset the removed tasks when tasks change
         // This ensures consistency when tasks are modified outside this view
@@ -85,63 +87,7 @@ struct TaskStackView: View {
             ForEach(Array(tasks.enumerated()), id: \.element.id) { index, task in
                 // Only show tasks that aren't marked for removal
                 if !tasksToRemove.contains(ObjectIdentifier(task)) {
-                    TaskCardView(task: task) {
-                        // Toggle completion state
-                        task.isCompleted.toggle()
-                        
-                        // If task was just marked as completed, schedule it for removal
-                        if task.isCompleted {
-                            // Add a short delay for the completion animation to be visible
-                            withAnimation(.easeInOut(duration: 0.3).delay(0.5)) {
-                                tasksToRemove.insert(ObjectIdentifier(task))
-                            }
-                        } else {
-                            // If task was reopened, make sure it's not in the removal set
-                            tasksToRemove.remove(ObjectIdentifier(task))
-                        }
-                    }
-                    // Handle vertical offset - use extended spacing in selection mode
-                    .offset(y: isSelectionModeActive ? 
-                          calculateExpandedOffset(for: index) : 
-                          calculateYOffset(for: index))
-                    // Apply scaling effect
-                    .scaleEffect(calculateScale(for: index))
-                    // Ensure proper stacking with z-index - with hover adjustment
-                    .zIndex(calculateZIndex(for: index))
-                    // Apply hover effects
-                    .onHover { isHovered in
-                        if isHovered {
-                            // Card is being hovered over
-                            hoveredTaskIndex = index
-                            
-                            // Activate selection mode when any card is hovered
-                            if !isSelectionModeActive {
-                                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                    isSelectionModeActive = true
-                                }
-                            }
-                        } else if hoveredTaskIndex == index {
-                            // Card is no longer being hovered
-                            hoveredTaskIndex = nil
-                            
-                            // Keep selection mode active for a shorter time to allow moving to another card
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
-                                if hoveredTaskIndex == nil {
-                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                        isSelectionModeActive = false
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    // Transition effect for task removal - slide out and fade 
-                    .transition(AnyTransition.asymmetric(
-                        insertion: .opacity.combined(with: .scale),
-                        removal: .opacity.combined(with: .offset(x: 100)).combined(with: .scale(scale: 0.8))
-                    ))
-                    // Animation for all changes except selection mode toggling
-                    // (selection mode uses its own animation in the onHover handler)
-                    .animation(.easeOut(duration: 0.2), value: hoveredTaskIndex)
+                    taskCardView(for: task, at: index)
                 }
             }
         }
@@ -153,6 +99,96 @@ struct TaskStackView: View {
         }
     }
     
+    // MARK: - Task mechanics
+    // Extract task card creation to a separate function to reduce complexity
+    @ViewBuilder
+    private func taskCardView(for task: Task, at index: Int) -> some View {
+        // Setup the transition for removal animation
+        let insertionTransition = AnyTransition.opacity.combined(with: .scale)
+        
+        // Create a custom opacity effect that fades out more slowly
+        let slowOpacity = AnyTransition.opacity.animation(.easeOut(duration: 1.0))
+        
+        // Create the removal transition in stages to avoid complex expressions
+        let removalStep1 = slowOpacity.combined(with: .offset(x: 250, y: CGFloat(-index * 50) - 250))
+        let removalStep2 = removalStep1.combined(with: .scale(scale: 0.2))
+        // Note: We can't use rotation3DEffect directly as a transition
+        // Just use the steps we already have
+        let removalTransition = removalStep2
+        
+        // The complete transition combines both insertion and removal transitions
+        let taskTransition = AnyTransition.asymmetric(
+            insertion: insertionTransition,
+            removal: removalTransition
+        )
+        
+        // Calculate the vertical offset based on selection mode
+        let verticalOffset = isSelectionModeActive ? 
+            calculateExpandedOffset(for: index) : 
+            calculateYOffset(for: index)
+            
+        return TaskCardView(task: task) {
+            // Toggle completion state
+            task.isCompleted.toggle()
+            
+            // Handle task completion state change
+            if task.isCompleted {
+                // When a task is completed, it will animate upward and fade out
+                withAnimation(.easeOut(duration: 1.0).delay(0.3)) {
+                    tasksToRemove.insert(ObjectIdentifier(task))
+                }
+            } else {
+                // If task was reopened, make sure it's not in the removal set
+                tasksToRemove.remove(ObjectIdentifier(task))
+            }
+        }
+        // Apply positioning and visual effects
+        .offset(y: verticalOffset)
+        .scaleEffect(calculateScale(for: index))
+        .rotation3DEffect(
+            task.isCompleted ? .degrees(10) : .degrees(0),
+            axis: (x: 1.0, y: 0.2, z: 0.0)
+        )
+        .zIndex(calculateZIndex(for: index))
+        .onHover { isHovered in
+            handleHover(isHovered: isHovered, at: index)
+        }
+        .transition(taskTransition)
+        // Animation for hover effects
+        .animation(.easeOut(duration: 0.2), value: hoveredTaskIndex)
+        // Animation for completion state changes
+        .animation(.easeOut(duration: 0.7), value: task.isCompleted)
+    }
+    
+    // MARK: - Hover
+    // Handle hover state changes
+    private func handleHover(isHovered: Bool, at index: Int) {
+        if isHovered {
+            // Card is being hovered over
+            hoveredTaskIndex = index
+            
+            // Activate selection mode when any card is hovered
+            if !isSelectionModeActive {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    isSelectionModeActive = true
+                }
+            }
+        } else if hoveredTaskIndex == index {
+            // Card is no longer being hovered
+            hoveredTaskIndex = nil
+            
+            // Keep selection mode active for a shorter time to allow moving to another card
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+                if hoveredTaskIndex == nil {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        isSelectionModeActive = false
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Overlapping
     /// Calculate the Y offset for a card at the given index
     private func calculateYOffset(for index: Int) -> CGFloat {
         if let offsetByIndex = offsetByIndex {
@@ -164,6 +200,7 @@ struct TaskStackView: View {
         }
     }
     
+    // MARK: - Scaling
     /// Calculate the scale for a card at the given index
     private func calculateScale(for index: Int) -> CGFloat {
         // When cards are fanned out in selection mode, apply distance-based scaling
@@ -211,6 +248,7 @@ struct TaskStackView: View {
         }
     }
     
+    // MARK: - Fanning
     /// Calculate an expanded vertical offset for fan-out view in selection mode
     private func calculateExpandedOffset(for index: Int) -> CGFloat {
         let totalCards = tasks.count
@@ -252,6 +290,7 @@ struct TaskStackView: View {
         return basePosition + hoverBonus
     }
     
+    // MARK: - Z-index
     /// Calculate the z-index for a card, taking into account hover state
     private func calculateZIndex(for index: Int) -> Double {
         // Default stacking: top card has highest z-index
