@@ -12,6 +12,7 @@ import AppKit
 @main
 struct DailyApp: App {
     @StateObject private var taskResetManager: TaskResetManager
+    @StateObject private var settingsManager = SettingsManager()
     @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
     
     var sharedModelContainer: ModelContainer = {
@@ -83,6 +84,7 @@ struct DailyApp: App {
         WindowGroup {
             MainView()
                 .environmentObject(taskResetManager) // Make available throughout the app
+                .environmentObject(settingsManager) // Make settings available throughout the app
                 .environment(\.resetTaskManager, taskResetManager) // Provide via environment key
                 // Hide the window at startup and let the menu bar handle it
                 .hidden()
@@ -96,6 +98,12 @@ struct DailyApp: App {
         .commands {
             // Remove the default window menu 
             CommandGroup(replacing: .newItem) { }
+        }
+        
+        // Add standard macOS Settings scene
+        Settings {
+            SettingsView()
+                .environmentObject(settingsManager)
         }
     }
 }

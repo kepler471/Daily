@@ -74,6 +74,12 @@ class MenuBarManager: NSObject {
         
         menu.addItem(NSMenuItem.separator())
         
+        let settingsItem = NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ",")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        
         let quitItem = NSMenuItem(title: "Quit Daily", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
@@ -114,6 +120,11 @@ class MenuBarManager: NSObject {
     @objc private func resetTasks() {
         // Post notification to reset today's tasks
         NotificationCenter.default.post(name: NSNotification.Name("ResetTodaysTasks"), object: nil)
+    }
+    
+    @objc private func openSettings() {
+        // Post notification to open settings window
+        NotificationCenter.default.post(name: NSNotification.Name("OpenSettingsWindow"), object: nil)
     }
     
     @objc private func quitApp() {
