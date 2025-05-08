@@ -10,6 +10,7 @@ import SwiftData
 
 struct AddTaskButtonView: View {
     @Binding var showingAddTask: Bool
+    var color: Color = .blue
     
     var body: some View {
         Button {
@@ -22,7 +23,7 @@ struct AddTaskButtonView: View {
                 .frame(width: 28, height: 28)
                 .background(
                     Circle()
-                        .fill(Color.blue)
+                        .fill(color)
                 )
         }
     }
@@ -62,7 +63,7 @@ struct AddTaskView: View {
                     .padding(.vertical, 10)
                     .background(
                         RoundedRectangle(cornerRadius: 10)
-                            .fill(title.isEmpty ? Color.gray : Color.blue)
+                            .fill(title.isEmpty ? Color.gray : category == .required ? Color.blue : Color.green)
                     )
                     .buttonStyle(.plain)
                 }
