@@ -144,7 +144,9 @@ struct TaskStackView: View {
             }
             
             // If no card is hovered, use the middle of the stack as reference
-            let referenceIndex = hoveredTaskIndex ?? (tasks.count / 2)
+            // For odd-numbered collections, this will be the exact middle
+            // For even-numbered collections, it will be just below the middle
+            let referenceIndex = hoveredTaskIndex ?? Int(floor(Double(tasks.count - 1) / 2.0))
             
             // Calculate distance from the hovered/reference card
             let distance = abs(index - referenceIndex)
@@ -196,7 +198,18 @@ struct TaskStackView: View {
         
         // Calculate total height of the fan and center it
         let fanHeight = cardSpacing * CGFloat(totalCards - 1)
-        let basePosition = positionFactor * (fanHeight / 2.0)
+//        let basePosition = positionFactor * (fanHeight / 2.0)
+        
+        // Add a tiny gap between perfectly adjacent cards in odd-length stacks to help hover aetection
+        let middleIndex = Int(floor(Double(tasks.count - 1) / 2.0))
+        let isOddCount = tasks.count % 2 != 0
+        
+        var basePosition = positionFactor * (fanHeight / 2.0)
+        
+        // Add a tiny offset to the middle card in odd-length stacks
+        if isOddCount && index == middleIndex {
+            basePosition += 2.0 // Just enough to break symmetry but not visually aoticeable
+        }
         
         // Apply a small offset for the hovered card to make it stand out
         let hoverBonus: CGFloat = (hoveredTaskIndex == index) ? -5 : 0
@@ -206,32 +219,57 @@ struct TaskStackView: View {
     
     /// Calculate the z-index for a card, taking into account hover state
     private func calculateZIndex(for index: Int) -> Double {
+        // Default stacking: top card has highest z-index
         let baseZIndex = Double(tasks.count - index)
         
-        // If this task is being hovered, bring it to the front by adding a high value
-        if hoveredTaskIndex == index {
-            // Add a value higher than the task count to ensure it's on top
-            return baseZIndex + 1000
+        // Standard stacking when not in selection mode or no task is hovered
+        if !isSelectionModeActive || hoveredTaskIndex == nil {
+            return baseZIndex
         }
-        // TODO: Else, if in select mode, z-index should be decreasing from the hovered task
-        return baseZIndex
+        
+        // When in selection mode with a hovered task
+        if hoveredTaskIndex == index {
+            // Hovered task gets highest z-index
+            return 10.0 
+        } else {
+            // All other tasks get z-index based on distance from hovered task
+            let distance = abs(index - (hoveredTaskIndex ?? 0))
+            return 10.0 - Double(distance)
+        }
     }
 }
 
 // MARK: - Previews
 
 #Preview("Scalar") {
-    TaskStackView(
-        category: nil,
-        verticalOffset: 20)
-        .frame(height: 600)
-        .padding()
-        .modelContainer(TaskMockData.createPreviewContainer())
+    TabView {
+        TaskStackView(
+            category: .required,
+            verticalOffset: 20)
+            .frame(height: 600)
+            .padding()
+            .modelContainer(TaskMockData.createPreviewContainer())
+            .tabItem {
+                Label("Required", systemImage: "checklist")
+            }
+            .tag(0)
+        
+        TaskStackView(
+            category: .suggested,
+            verticalOffset: 20)
+            .frame(height: 600)
+            .padding()
+            .modelContainer(TaskMockData.createPreviewContainer())
+            .tabItem {
+                Label("Suggested", systemImage: "checklist")
+            }
+            .tag(1)
+    }
 }
 
 #Preview("Log") {
     TaskStackView(
-        category: .required,
+        category: nil,
         offsetByIndex: { i in
             return CGFloat(60 * pow(0.2 * Double(i), 0.5))
         }

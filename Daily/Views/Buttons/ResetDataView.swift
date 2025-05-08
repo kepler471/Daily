@@ -13,7 +13,6 @@ struct ResetDataView: View {
     var onReset: (() -> Void)?
     
     var body: some View {
-        #if DEBUG
         Button(action: resetData) {
             Image(systemName: "trash")
                 .font(.footnote)
@@ -24,12 +23,8 @@ struct ResetDataView: View {
                         .fill(Color.red)
                 )
         }
-        #else
-        EmptyView()
-        #endif
     }
     
-    #if DEBUG
     private func resetData() {
         // Delete all tasks
         do {
@@ -44,11 +39,9 @@ struct ResetDataView: View {
             print("Error resetting data: \(error)")
         }
     }
-    #endif
 }
 
 #Preview {
     ResetDataView()
         .padding()
-        .previewLayout(.sizeThatFits)
 }

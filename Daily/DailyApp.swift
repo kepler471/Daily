@@ -21,6 +21,7 @@ struct DailyApp: App {
             allowsSave: true
         )
         
+        // @TEMP
         // Use a temporary in-memory container for now while we develop
         // Later we can switch to a persistent container
         do {

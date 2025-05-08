@@ -22,10 +22,11 @@ struct TaskMockData {
         let meditation = Task(title: "Meditation", order: 3, category: .required)
         let email = Task(title: "Check email", order: 4, category: .required)
         let lunch = Task(title: "Eat some lunch", order: 5, category: .required)
+        let dinner = Task(title: "Eat some dinner", order: 9, category: .required)
         // Suggested tasks
-        let exercise = Task(title: "Exercise", order: 6, category: .required)
-        let reading = Task(title: "Reading", order: 7, category: .required)
-        let journaling = Task(title: "Journaling", order: 8, category: .required)
+        let exercise = Task(title: "Exercise", order: 6, category: .suggested)
+        let reading = Task(title: "Reading", order: 7, category: .suggested)
+        let journaling = Task(title: "Journaling", order: 8, category: .suggested)
         
         // Add time to some tasks
         let calendar = Calendar.current
@@ -47,6 +48,7 @@ struct TaskMockData {
         context.insert(meditation)
         context.insert(email)
         context.insert(lunch)
+        context.insert(dinner)
         context.insert(exercise)
         context.insert(reading)
         context.insert(journaling)
