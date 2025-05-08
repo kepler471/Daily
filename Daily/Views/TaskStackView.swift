@@ -75,52 +75,82 @@ struct TaskStackView: View {
         )
     }
     
+    // Track tasks that should be removed after completion
+    @State private var tasksToRemove: Set<ObjectIdentifier> = []
+    
     var body: some View {
+        // Reset the removed tasks when tasks change
+        // This ensures consistency when tasks are modified outside this view
         ZStack {
             ForEach(Array(tasks.enumerated()), id: \.element.id) { index, task in
-                TaskCardView(task: task) {
-                    task.isCompleted.toggle()
-                }
-                // Handle vertical offset - use extended spacing in selection mode
-                .offset(y: isSelectionModeActive ? 
-                      calculateExpandedOffset(for: index) : 
-                      calculateYOffset(for: index))
-                // Apply scaling effect
-                .scaleEffect(calculateScale(for: index))
-                // Ensure proper stacking with z-index - with hover adjustment
-                .zIndex(calculateZIndex(for: index))
-                // Apply hover effects
-                .onHover { isHovered in
-                    if isHovered {
-                        // Card is being hovered over
-                        hoveredTaskIndex = index
+                // Only show tasks that aren't marked for removal
+                if !tasksToRemove.contains(ObjectIdentifier(task)) {
+                    TaskCardView(task: task) {
+                        // Toggle completion state
+                        task.isCompleted.toggle()
                         
-                        // Activate selection mode when any card is hovered
-                        if !isSelectionModeActive {
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                isSelectionModeActive = true
+                        // If task was just marked as completed, schedule it for removal
+                        if task.isCompleted {
+                            // Add a short delay for the completion animation to be visible
+                            withAnimation(.easeInOut(duration: 0.3).delay(0.5)) {
+                                tasksToRemove.insert(ObjectIdentifier(task))
                             }
+                        } else {
+                            // If task was reopened, make sure it's not in the removal set
+                            tasksToRemove.remove(ObjectIdentifier(task))
                         }
-                    } else if hoveredTaskIndex == index {
-                        // Card is no longer being hovered
-                        hoveredTaskIndex = nil
-                        
-                        // Keep selection mode active for a shorter time to allow moving to another card
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
-                            if hoveredTaskIndex == nil {
+                    }
+                    // Handle vertical offset - use extended spacing in selection mode
+                    .offset(y: isSelectionModeActive ? 
+                          calculateExpandedOffset(for: index) : 
+                          calculateYOffset(for: index))
+                    // Apply scaling effect
+                    .scaleEffect(calculateScale(for: index))
+                    // Ensure proper stacking with z-index - with hover adjustment
+                    .zIndex(calculateZIndex(for: index))
+                    // Apply hover effects
+                    .onHover { isHovered in
+                        if isHovered {
+                            // Card is being hovered over
+                            hoveredTaskIndex = index
+                            
+                            // Activate selection mode when any card is hovered
+                            if !isSelectionModeActive {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                    isSelectionModeActive = false
+                                    isSelectionModeActive = true
+                                }
+                            }
+                        } else if hoveredTaskIndex == index {
+                            // Card is no longer being hovered
+                            hoveredTaskIndex = nil
+                            
+                            // Keep selection mode active for a shorter time to allow moving to another card
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+                                if hoveredTaskIndex == nil {
+                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                        isSelectionModeActive = false
+                                    }
                                 }
                             }
                         }
                     }
+                    // Transition effect for task removal - slide out and fade 
+                    .transition(AnyTransition.asymmetric(
+                        insertion: .opacity.combined(with: .scale),
+                        removal: .opacity.combined(with: .offset(x: 100)).combined(with: .scale(scale: 0.8))
+                    ))
+                    // Animation for all changes except selection mode toggling
+                    // (selection mode uses its own animation in the onHover handler)
+                    .animation(.easeOut(duration: 0.2), value: hoveredTaskIndex)
                 }
-                // Animation for all changes except selection mode toggling
-                // (selection mode uses its own animation in the onHover handler)
-                .animation(.easeOut(duration: 0.2), value: hoveredTaskIndex)
             }
         }
         .padding()
+        .onChange(of: tasks) { oldValue, newValue in
+            // Reset the removal tracking when tasks change
+            // This ensures we don't accidentally hide new tasks
+            tasksToRemove.removeAll()
+        }
     }
     
     /// Calculate the Y offset for a card at the given index

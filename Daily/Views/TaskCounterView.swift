@@ -9,36 +9,36 @@ import SwiftUI
 import SwiftData
 
 struct TaskCounterView: View {
-    @Environment(\.modelContext) private var modelContext
+    // Use direct queries to observe tasks dynamically
+    @Query(sort: \Task.order) private var allTasks: [Task]
+    @Query(filter: #Predicate<Task> { $0.isCompleted == true }, sort: \Task.order) private var completedTasks: [Task]
+    
+    // For category-specific filtering
     let category: TaskCategory?
     
     init(category: TaskCategory? = nil) {
         self.category = category
+        
+        if let category = category {
+            // Category-specific queries
+            _allTasks = Query(filter: #Predicate<Task> { $0.categoryRaw == category.rawValue }, 
+                             sort: \Task.order)
+            _completedTasks = Query(filter: #Predicate<Task> { 
+                $0.categoryRaw == category.rawValue && $0.isCompleted == true 
+            }, sort: \Task.order)
+        }
     }
     
     var body: some View {
-        Text("\(getCompletedTaskCount())/\(getTaskCount())")
+        // Calculate counts directly from observed arrays
+        Text("\(completedTasks.count)/\(allTasks.count)")
             .font(.title)
             .fontWeight(.semibold)
             .foregroundColor(.primary)
-    }
-    
-    private func getTaskCount() -> Int {
-        do {
-            return try modelContext.countTasks(category: category)
-        } catch {
-            print("Error fetching task count: \(error)")
-            return 0
-        }
-    }
-    
-    private func getCompletedTaskCount() -> Int {
-        do {
-            return try modelContext.countCompletedTasks(category: category)
-        } catch {
-            print("Error fetching completed task count: \(error)")
-            return 0
-        }
+            .id(UUID()) // Force refresh on state changes
+//            .onChange(of: allTasks.count) { _, _ in } // Trigger view update when count changes
+//            .onChange(of: completedTasks.count) { _, _ in } // Trigger view update when count changes
+            .animation(.easeInOut, value: completedTasks.count)
     }
 }
 
@@ -46,5 +46,4 @@ struct TaskCounterView: View {
     TaskCounterView(category: .required)
         .modelContainer(TaskMockData.createPreviewContainer())
         .padding()
-        .previewLayout(.sizeThatFits)
 }
