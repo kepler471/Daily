@@ -83,6 +83,7 @@ struct DailyApp: App {
         WindowGroup {
             MainView()
                 .environmentObject(taskResetManager) // Make available throughout the app
+                .environment(\.resetTaskManager, taskResetManager) // Provide via environment key
                 // Hide the window at startup and let the menu bar handle it
                 .hidden()
                 .onAppear {

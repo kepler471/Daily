@@ -13,6 +13,38 @@ struct MainView: View {
     @State private var showingAddTask = false
     @State private var showingRequiredCompletedTasks = false
     @State private var showingSuggestedCompletedTasks = false
+    @Environment(\.resetTaskManager) private var resetTaskManager
+    
+    init() {
+        setupNotificationHandlers()
+    }
+    
+    private func setupNotificationHandlers() {
+        // Set up notification observers for menu bar actions
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("ShowAddTaskSheet"),
+            object: nil,
+            queue: .main
+        ) { _ in
+            self.showingAddTask = true
+        }
+        
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("ShowCompletedTasks"),
+            object: nil,
+            queue: .main
+        ) { _ in
+            self.showingRequiredCompletedTasks = true
+        }
+        
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("ResetTodaysTasks"),
+            object: nil,
+            queue: .main
+        ) { _ in
+            resetTaskManager?.resetAllTasks()
+        }
+    }
     
     var body: some View {
         ZStack(alignment: .top) {

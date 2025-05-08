@@ -9,6 +9,7 @@ import Foundation
 import SwiftData
 import Combine
 import AppKit
+import SwiftUI
 
 /// Manages the automatic reset of tasks at a specified time each day
 class TaskResetManager: ObservableObject {
@@ -117,5 +118,20 @@ class TaskResetManager: ObservableObject {
     func resetTasksNow() {
         resetAllTasks()
         scheduleNextReset()
+    }
+}
+
+// MARK: - Environment Key for TaskResetManager
+
+// Define the environment key for accessing the TaskResetManager
+struct ResetTaskManagerKey: EnvironmentKey {
+    static let defaultValue: TaskResetManager? = nil
+}
+
+// Extend the environment values to provide access to the TaskResetManager
+extension EnvironmentValues {
+    var resetTaskManager: TaskResetManager? {
+        get { self[ResetTaskManagerKey.self] }
+        set { self[ResetTaskManagerKey.self] = newValue }
     }
 }

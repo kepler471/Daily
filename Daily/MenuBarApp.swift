@@ -40,16 +40,71 @@ class MenuBarManager: NSObject {
         let event = NSApp.currentEvent!
         
         if event.type == .rightMouseUp {
-            // Handle right-click (will be implemented later)
-            print("Right-clicked on menu bar icon")
-            
-            // TODO: Implement right-click menu
-            // For now, we'll just toggle the popover like left-click
-            togglePopoverVisibility(sender)
+            // Handle right-click by showing context menu
+            showContextMenu(for: sender)
         } else {
-            // Handle left-click
+            // Handle left-click by toggling the popover
             togglePopoverVisibility(sender)
         }
+    }
+    
+    /// Show the context menu for right-click
+    private func showContextMenu(for button: NSStatusBarButton) {
+        // Create the menu
+        let menu = NSMenu()
+        
+        // Add menu items
+        menu.addItem(NSMenuItem(title: "Open Daily", action: #selector(openDaily), keyEquivalent: "o"))
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(NSMenuItem(title: "Add Task", action: #selector(addNewTask), keyEquivalent: "n"))
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(NSMenuItem(title: "Show Completed Tasks", action: #selector(showCompletedTasks), keyEquivalent: "c"))
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(NSMenuItem(title: "Reset Today's Tasks", action: #selector(resetTasks), keyEquivalent: "r"))
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q"))
+        
+        // Set menu appearance
+        menu.appearance = NSAppearance(named: .aqua)
+        
+        // Display the menu
+        menu.popUp(positioning: nil, at: NSPoint(x: button.frame.origin.x, y: button.frame.origin.y - 2), in: button)
+    }
+    
+    // Menu item action handlers
+    @objc private func openDaily() {
+        if let popover = self.popover, !popover.isShown {
+            showPopover(statusItem?.button ?? NSStatusBarButton())
+        }
+    }
+    
+    @objc private func addNewTask() {
+        // First make sure popover is shown
+        if let popover = self.popover, !popover.isShown {
+            showPopover(statusItem?.button ?? NSStatusBarButton())
+        }
+        
+        // Post notification to trigger add task sheet
+        NotificationCenter.default.post(name: NSNotification.Name("ShowAddTaskSheet"), object: nil)
+    }
+    
+    @objc private func showCompletedTasks() {
+        // First make sure popover is shown
+        if let popover = self.popover, !popover.isShown {
+            showPopover(statusItem?.button ?? NSStatusBarButton())
+        }
+        
+        // Post notification to show completed tasks
+        NotificationCenter.default.post(name: NSNotification.Name("ShowCompletedTasks"), object: nil)
+    }
+    
+    @objc private func resetTasks() {
+        // Post notification to reset today's tasks
+        NotificationCenter.default.post(name: NSNotification.Name("ResetTodaysTasks"), object: nil)
+    }
+    
+    @objc private func quitApp() {
+        NSApp.terminate(nil)
     }
     
     /// Show or hide the popover
