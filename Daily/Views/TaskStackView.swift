@@ -22,44 +22,57 @@ struct TaskStackView: View {
     var offsetByIndex: ((Int) -> CGFloat)?
     var scaleByIndex: ((Int) -> CGFloat)?
     var scaleAmount: CGFloat
+    var category: TaskCategory?
     
     /// Initialize with a constant vertical offset and optional scale
-    init(verticalOffset: CGFloat = 20, scale: CGFloat = 1.0) {
+    init(category: TaskCategory? = nil, verticalOffset: CGFloat = 20, scale: CGFloat = 1.0) {
         self.verticalOffset = verticalOffset
         self.offsetByIndex = nil
         self.scaleByIndex = nil
         self.scaleAmount = scale
+        self.category = category
         
-        _tasks = Query(sort: [
-            SortDescriptor(\Task.order, order: .forward),
-            SortDescriptor(\Task.createdAt, order: .forward)
-        ])
+        _tasks = Query(
+            filter: Task.Predicates.byCategory(category),
+            sort: [
+                SortDescriptor(\Task.order, order: .forward),
+                SortDescriptor(\Task.createdAt, order: .forward)
+            ]
+        )
     }
     
     /// Initialize with a function mapping index to offset and optional scale
-    init(offsetByIndex: @escaping (Int) -> CGFloat, scale: CGFloat = 1.0) {
+    init(category: TaskCategory? = nil, offsetByIndex: @escaping (Int) -> CGFloat, scale: CGFloat = 1.0) {
         self.verticalOffset = 0 // Not used in this initialization
         self.offsetByIndex = offsetByIndex
         self.scaleByIndex = nil
         self.scaleAmount = scale
+        self.category = category
         
-        _tasks = Query(sort: [
-            SortDescriptor(\Task.order, order: .forward),
-            SortDescriptor(\Task.createdAt, order: .forward)
-        ])
+        _tasks = Query(
+            filter: Task.Predicates.byCategory(category),
+            sort: [
+                SortDescriptor(\Task.order, order: .forward),
+                SortDescriptor(\Task.createdAt, order: .forward)
+            ]
+        )
     }
     
     /// Initialize with functions for both offset and scale
-    init(offsetByIndex: @escaping (Int) -> CGFloat, scaleByIndex: @escaping (Int) -> CGFloat) {
+    init(category: TaskCategory? = .required, offsetByIndex: @escaping (Int) -> CGFloat, scaleByIndex: @escaping (Int) -> CGFloat) {
         self.verticalOffset = 0 // Not used in this initialization
         self.offsetByIndex = offsetByIndex
         self.scaleByIndex = scaleByIndex
         self.scaleAmount = 1.0 // Not used in this initialization
+        self.category = category
         
-        _tasks = Query(sort: [
-            SortDescriptor(\Task.order, order: .forward),
-            SortDescriptor(\Task.createdAt, order: .forward)
-        ])
+        _tasks = Query(
+            filter: Task.Predicates.byCategory(category),
+            sort: [
+                SortDescriptor(\Task.order, order: .forward),
+                SortDescriptor(\Task.createdAt, order: .forward)
+            ]
+        )
     }
     
     var body: some View {
@@ -200,7 +213,7 @@ struct TaskStackView: View {
             // Add a value higher than the task count to ensure it's on top
             return baseZIndex + 1000
         }
-        
+        // TODO: Else, if in select mode, z-index should be decreasing from the hovered task
         return baseZIndex
     }
 }
@@ -208,23 +221,28 @@ struct TaskStackView: View {
 // MARK: - Previews
 
 #Preview("Scalar") {
-    TaskStackView(verticalOffset: 20)
+    TaskStackView(
+        category: nil,
+        verticalOffset: 20)
         .frame(height: 600)
         .padding()
         .modelContainer(TaskMockData.createPreviewContainer())
 }
 
 #Preview("Log") {
-    TaskStackView(offsetByIndex: { i in
-        return CGFloat(60 * pow(0.2 * Double(i), 0.5))
-    })
+    TaskStackView(
+        category: .required,
+        offsetByIndex: { i in
+            return CGFloat(60 * pow(0.2 * Double(i), 0.5))
+        }
+    )
         .frame(height: 600)
         .padding()
         .modelContainer(TaskMockData.createPreviewContainer())
 }
 
 #Preview("With Scale") {
-    TaskStackView(verticalOffset: 20, scale: 0.85)
+    TaskStackView(category: .required, verticalOffset: 20, scale: 0.85)
         .frame(height: 600)
         .padding()
         .modelContainer(TaskMockData.createPreviewContainer())
@@ -232,6 +250,7 @@ struct TaskStackView: View {
 
 #Preview("Log with Scale") {
     TaskStackView(
+        category: .required,
         offsetByIndex: { i in
             return CGFloat(60 * pow(0.2 * Double(i), 0.5))
         },
@@ -257,6 +276,7 @@ struct TaskStackView: View {
             .padding(.bottom)
         
         TaskStackView(
+            category: .required,
             offsetByIndex: { i in
                 return CGFloat(30 * i)
             },
@@ -422,20 +442,25 @@ struct TaskStackAdjustablePreview: View {
             if useScale {
                 if useCustomScale {
                     TaskStackView(
+                        category: .required,
                         offsetByIndex: offsetFunction,
                         scaleByIndex: customScaleFunction
                     )
                     .frame(minHeight: 380)
                 } else {
                     TaskStackView(
+                        category: .required,
                         offsetByIndex: offsetFunction,
                         scale: CGFloat(scaleValue)
                     )
                     .frame(minHeight: 380)
                 }
             } else {
-                TaskStackView(offsetByIndex: offsetFunction)
-                    .frame(minHeight: 380)
+                TaskStackView(
+                    category: .required,
+                    offsetByIndex: offsetFunction
+                )
+                .frame(minHeight: 380)
             }
         }
         .padding(.vertical)
@@ -496,6 +521,9 @@ struct TaskStackAdjustablePreview: View {
     // Generate the full code representation based on current settings
     private func generateCodeText() -> String {
         var code = "TaskStackView(\n"
+        
+        // Add category
+        code += "    category: .required,\n"
         
         // Add offset function
         code += "    offsetByIndex: \(getOffsetFunctionText())"

@@ -10,7 +10,11 @@ import SwiftData
 
 struct TaskCounterView: View {
     @Environment(\.modelContext) private var modelContext
-    let category: TaskCategory
+    let category: TaskCategory?
+    
+    init(category: TaskCategory? = nil) {
+        self.category = category
+    }
     
     var body: some View {
         Text("\(getCompletedTaskCount())/\(getTaskCount())")
@@ -21,13 +25,7 @@ struct TaskCounterView: View {
     
     private func getTaskCount() -> Int {
         do {
-            let categoryString = category.rawValue
-            var descriptor = FetchDescriptor<Task>()
-            descriptor.predicate = #Predicate<Task> { task in
-                task.categoryRaw == categoryString
-            }
-            
-            return try modelContext.fetchCount(descriptor)
+            return try modelContext.countTasks(category: category)
         } catch {
             print("Error fetching task count: \(error)")
             return 0
@@ -36,13 +34,7 @@ struct TaskCounterView: View {
     
     private func getCompletedTaskCount() -> Int {
         do {
-            let categoryString = category.rawValue
-            var descriptor = FetchDescriptor<Task>()
-            descriptor.predicate = #Predicate<Task> { task in
-                task.categoryRaw == categoryString && task.isCompleted
-            }
-            
-            return try modelContext.fetchCount(descriptor)
+            return try modelContext.countCompletedTasks(category: category)
         } catch {
             print("Error fetching completed task count: \(error)")
             return 0

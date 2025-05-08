@@ -21,7 +21,9 @@ struct ContentView: View {
                     HStack(spacing: 12) {
                         AddTaskButtonView(showingAddTask: $showingAddTask)
                         
+                        #if DEBUG
                         ResetDataView()
+                        #endif
                     }
                     
                     Spacer()
@@ -33,7 +35,8 @@ struct ContentView: View {
                 .padding(.vertical, 8)
                 
                 // Task cards container with overlapping effect
-                TaskStackView(verticalOffset: 20, scale: 0.85)            }
+                TaskStackView(category: .required, verticalOffset: 20, scale: 0.85)
+            }
             .tabItem {
                 Label("Required", systemImage: "checklist")
             }
@@ -45,7 +48,9 @@ struct ContentView: View {
                     HStack(spacing: 12) {
                         AddTaskButtonView(showingAddTask: $showingAddTask)
                         
+                        #if DEBUG
                         ResetDataView()
+                        #endif
                     }
                     
                     Spacer()
@@ -57,7 +62,7 @@ struct ContentView: View {
                 .padding(.vertical, 8)
                 
                 // Task cards container with custom offset based on index
-                TaskStackView(verticalOffset: 20, scale: 0.85)
+                TaskStackView(category: .suggested, verticalOffset: 20, scale: 0.85)
             }
             .tabItem {
                 Label("Suggested", systemImage: "star")
