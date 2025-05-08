@@ -16,11 +16,19 @@ struct AddTaskButtonView: View {
         Button {
             showingAddTask = true
         } label: {
-            SharpPlus(size: 24)          // tailor size here
-                .padding(16)             // ≥ 44×44 tap target
+            Image(systemName: "plus")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(color)
+                .frame(width: 36, height: 36)
+                .background(
+                    Circle()
+                        .fill(color.opacity(0.15))
+                )
+                .padding(4)
         }
-        .buttonStyle(.plain)             // no default shading/tint
-        .contentShape(Rectangle())
+        .buttonStyle(.plain)
+        .contentShape(Circle())
+        .focusable(false)
     }
 }
 
@@ -32,47 +40,66 @@ struct AddTaskView: View {
     @State private var selectedCategory: TaskCategory = .required
     @State private var hasScheduledTime = false
     @State private var scheduledTime = Date()
+    @FocusState private var isTitleFieldFocused: Bool
     
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Task Details") {
-                    TextField("Title", text: $title)
+            VStack(spacing: 20) {
+                TextField("Task name", text: $title)
+                    .font(.system(size: 18, weight: .medium))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 14)
+                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.1)))
+                    .focused($isTitleFieldFocused)
+                
+                Picker("", selection: $selectedCategory) {
+                    Text("Required").tag(TaskCategory.required)
+                    Text("Suggested").tag(TaskCategory.suggested)
+                }
+                .pickerStyle(.segmented)
+                .padding(.vertical, 5)
+                
+                HStack {
+                    Toggle("", isOn: $hasScheduledTime)
+                        .labelsHidden()
                     
-                    Picker("Category", selection: $selectedCategory) {
-                        Text("Required").tag(TaskCategory.required)
-                        Text("Suggested").tag(TaskCategory.suggested)
-                    }
-                    .pickerStyle(.segmented)
-                    .padding(.vertical, 4)
+                    Text("Time")
+                        .foregroundColor(.secondary)
+                        .padding(.leading, 4)
                     
-                    Toggle("Schedule Time", isOn: $hasScheduledTime)
+                    Spacer()
                     
                     if hasScheduledTime {
-                        DatePicker("Time", selection: $scheduledTime, displayedComponents: .hourAndMinute)
+                        DatePicker("", selection: $scheduledTime, displayedComponents: .hourAndMinute)
+                            .labelsHidden()
+                            .fixedSize()
                     }
                 }
+                .padding(.vertical, 5)
                 
-                Section {
-                    Button("Add Task") {
-                        addTask()
-                        dismiss()
-                    }
-                    .disabled(title.isEmpty)
-                    .frame(maxWidth: .infinity)
-                    .foregroundColor(.white)
-                    .padding(.vertical, 10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(title.isEmpty ? Color.gray : selectedCategory == .required ? Color.blue : Color.green)
-                    )
-                    .buttonStyle(.plain)
+                Spacer()
+                
+                Button("Add Task") {
+                    addTask()
+                    dismiss()
                 }
+                .disabled(title.isEmpty)
+                .frame(maxWidth: .infinity)
+                .foregroundColor(.white)
+                .padding(.vertical, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(title.isEmpty ? Color.gray.opacity(0.5) : selectedCategory == .required ? Color.blue : Color.green)
+                )
+                .buttonStyle(.plain)
+                .focusable(false)
             }
+            .padding(20)
             .navigationTitle("New Task")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
+            .defaultFocus($isTitleFieldFocused, true)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -81,7 +108,11 @@ struct AddTaskView: View {
                 }
             }
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.height(300)])
+        .onAppear {
+            // Auto-focus the title field when the sheet appears
+            isTitleFieldFocused = true
+        }
     }
     
     private func addTask() {
@@ -113,32 +144,6 @@ struct AddTaskView: View {
             print("Error fetching next order: \(error)")
             return 0
         }
-    }
-}
-
-/// A crisp, solid “+” icon whose tips are square.
-struct SharpPlus: View {
-    /// Overall edge length of the plus (outside to outside).
-    var size: CGFloat = 24
-    /// Thickness of each arm. 1⁄6 of the size is a pleasing default.
-    var thickness: CGFloat { size / 6 }
-    /// Fill colour of the symbol.
-    var color: Color = .black
-    
-    var body: some View {
-        ZStack {
-            // Vertical bar
-            Rectangle()
-                .fill(color)
-                .frame(width: thickness, height: size)
-            // Horizontal bar
-            Rectangle()
-                .fill(color)
-                .frame(width: size, height: thickness)
-        }
-        // Keep the drawing centred inside any parent frame
-        .frame(width: size, height: size)
-        .accessibilityLabel(Text("Add"))
     }
 }
 
