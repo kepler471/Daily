@@ -101,8 +101,9 @@ struct TaskStackView: View {
     
     // MARK: - Task mechanics
     // Extract task card creation to a separate function to reduce complexity
-    @ViewBuilder
     private func taskCardView(for task: Task, at index: Int) -> some View {
+        
+        // MARK: - Animations
         // Setup the transition for removal animation
         let insertionTransition = AnyTransition.opacity.combined(with: .scale)
         
@@ -134,7 +135,7 @@ struct TaskStackView: View {
             // Handle task completion state change
             if task.isCompleted {
                 // When a task is completed, it will animate upward and fade out
-                withAnimation(.easeOut(duration: 1.0).delay(0.3)) {
+                _ = withAnimation(.easeOut(duration: 1.0).delay(0.3)) {
                     tasksToRemove.insert(ObjectIdentifier(task))
                 }
             } else {
