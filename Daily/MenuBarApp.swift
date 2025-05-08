@@ -54,21 +54,34 @@ class MenuBarManager: NSObject {
         let menu = NSMenu()
         
         // Add menu items
-        menu.addItem(NSMenuItem(title: "Open Daily", action: #selector(openDaily), keyEquivalent: "o"))
-        menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "Add Task", action: #selector(addNewTask), keyEquivalent: "n"))
-        menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "Show Completed Tasks", action: #selector(showCompletedTasks), keyEquivalent: "c"))
-        menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "Reset Today's Tasks", action: #selector(resetTasks), keyEquivalent: "r"))
-        menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q"))
+        let openItem = NSMenuItem(title: "Open Daily", action: #selector(openDaily), keyEquivalent: "o")
+        openItem.target = self
+        menu.addItem(openItem)
         
-        // Set menu appearance
-        menu.appearance = NSAppearance(named: .aqua)
+        menu.addItem(NSMenuItem.separator())
         
-        // Display the menu
-        menu.popUp(positioning: nil, at: NSPoint(x: button.frame.origin.x, y: button.frame.origin.y - 2), in: button)
+        let addTaskItem = NSMenuItem(title: "Add Task", action: #selector(addNewTask), keyEquivalent: "n")
+        addTaskItem.target = self
+        menu.addItem(addTaskItem)
+        
+        let completedItem = NSMenuItem(title: "Show Completed Tasks", action: #selector(showCompletedTasks), keyEquivalent: "c")
+        completedItem.target = self
+        menu.addItem(completedItem)
+        
+        let resetItem = NSMenuItem(title: "Reset Today's Tasks", action: #selector(resetTasks), keyEquivalent: "r")
+        resetItem.target = self
+        menu.addItem(resetItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        
+        let quitItem = NSMenuItem(title: "Quit Daily", action: #selector(quitApp), keyEquivalent: "q")
+        quitItem.target = self
+        menu.addItem(quitItem)
+        
+        // Display the menu - using the standard NSStatusItem method
+        statusItem?.menu = menu
+        statusItem?.button?.performClick(nil)
+        statusItem?.menu = nil  // Reset after use so left-click works normally
     }
     
     // Menu item action handlers
