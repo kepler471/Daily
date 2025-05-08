@@ -11,6 +11,8 @@ import SwiftData
 struct MainView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var showingAddTask = false
+    @State private var showingRequiredCompletedTasks = false
+    @State private var showingSuggestedCompletedTasks = false
     
     var body: some View {
         ZStack(alignment: .top) {
@@ -51,7 +53,7 @@ struct MainView: View {
                         Spacer()
                         
                         // Counter right aligned
-                        TaskCounterView(category: .required)
+                        TaskCounterView(category: .required, showCompletedTasks: $showingRequiredCompletedTasks)
                     }
                     .frame(minWidth: 0, maxWidth: .infinity)
                     .padding(.horizontal)
@@ -68,7 +70,7 @@ struct MainView: View {
                         Spacer()
                         
                         // Counter right aligned
-                        TaskCounterView(category: .suggested)
+                        TaskCounterView(category: .suggested, showCompletedTasks: $showingSuggestedCompletedTasks)
                     }
                     .frame(minWidth: 0, maxWidth: .infinity)
                     .padding(.horizontal)
@@ -79,10 +81,26 @@ struct MainView: View {
                 
                 Spacer()
             }
+            
+            // Completed tasks overlay for Required category
+            if showingRequiredCompletedTasks {
+                CompletedTaskView(category: .required, isPresented: $showingRequiredCompletedTasks)
+                    .transition(.opacity)
+                    .zIndex(100)
+            }
+            
+            // Completed tasks overlay for Suggested category
+            if showingSuggestedCompletedTasks {
+                CompletedTaskView(category: .suggested, isPresented: $showingSuggestedCompletedTasks)
+                    .transition(.opacity)
+                    .zIndex(100)
+            }
         }
         .sheet(isPresented: $showingAddTask) {
             AddTaskView()
         }
+        .animation(.easeInOut(duration: 0.3), value: showingRequiredCompletedTasks)
+        .animation(.easeInOut(duration: 0.3), value: showingSuggestedCompletedTasks)
     }
 }
 
