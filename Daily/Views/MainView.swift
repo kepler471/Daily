@@ -65,19 +65,6 @@ struct MainView: View {
                 HStack(spacing: 0) {
                     // Left half
                     HStack {
-                        // Add button and reset at left
-                        HStack(spacing: 12) {
-                            // Add task button
-                            AddTaskButtonView(showingAddTask: $showingAddTask, color: .purple)
-                                
-                            #if DEBUG
-                            HStack(spacing: 20) {
-                                ResetDataView()
-                                ResetTasksView()
-                            }
-                            #endif
-                        }
-                        
                         Spacer()
                         
                         // Required category title centered in left half
