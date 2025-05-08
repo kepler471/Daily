@@ -39,7 +39,10 @@ struct MainView: View {
                             AddTaskButtonView(showingAddTask: $showingAddTask, color: .purple)
                                 
                             #if DEBUG
-                            ResetDataView()
+                            HStack(spacing: 20) {
+                                ResetDataView()
+                                ResetTasksView()
+                            }
                             #endif
                         }
                         

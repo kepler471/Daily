@@ -10,6 +10,8 @@ import SwiftData
 
 @main
 struct DailyApp: App {
+    @StateObject private var taskResetManager: TaskResetManager
+    
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Task.self,
@@ -51,10 +53,20 @@ struct DailyApp: App {
             }
         }
     }()
+    
+    init() {
+        // Create the model context and task reset manager
+        let context = ModelContext(sharedModelContainer)
+        let manager = TaskResetManager(modelContext: context)
+        
+        // Initialize the state object
+        _taskResetManager = StateObject(wrappedValue: manager)
+    }
 
     var body: some Scene {
         WindowGroup {
             MainView()
+                .environmentObject(taskResetManager) // Make available throughout the app
         }
         .modelContainer(sharedModelContainer)
     }
