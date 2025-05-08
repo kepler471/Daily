@@ -49,11 +49,11 @@ struct CompletedTaskView: View {
     
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            // Blurred background
-            Color.black.opacity(0.2)
+            // Translucent blurred background
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .opacity(0.85)
                 .ignoresSafeArea()
-                .blur(radius: 10)
-                .background(.ultraThinMaterial)
             
             // Close button
             Button(action: { isPresented = false }) {
@@ -156,7 +156,9 @@ struct CompletedTaskView: View {
         }
         .padding()
         .background(
-            Color(.windowBackgroundColor).opacity(0.8)
+            Rectangle()
+                .fill(.regularMaterial)
+                .opacity(0.9)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)
                         .stroke(Color.gray.opacity(0.3), lineWidth: 1)
