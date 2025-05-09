@@ -8,13 +8,48 @@
 import SwiftUI
 import AppKit
 
+// MARK: - Notification Constants
+
+/// Extension for centralizing notification names used in the app
+extension Notification.Name {
+    /// Notification to show the add task sheet
+    static let showAddTaskSheet = Notification.Name("ShowAddTaskSheet")
+    
+    /// Notification to show completed tasks view
+    static let showCompletedTasks = Notification.Name("ShowCompletedTasks")
+    
+    /// Notification to reset today's tasks
+    static let resetTodaysTasks = Notification.Name("ResetTodaysTasks")
+    
+    /// Notification to open settings using SwiftUI's SettingsLink
+    static let openSettingsWithLink = Notification.Name("OpenSettingsWithLink")
+}
+
+// MARK: - Menu Bar Manager
+
 /// Class responsible for managing the menu bar functionality of the app
+///
+/// This class handles:
+/// - Creating and configuring the status item in the macOS menu bar
+/// - Managing the popover that appears when clicking the status item
+/// - Creating and handling the right-click context menu
+/// - Detecting clicks outside the popover to automatically close it
 class MenuBarManager: NSObject {
+    // MARK: Properties
+    
+    /// The menu bar status item that displays the app icon
     private var statusItem: NSStatusItem?
+    
+    /// The popover that contains the main app interface
     private var popover: NSPopover?
+    
+    /// Event monitor for detecting clicks outside the popover
     private var eventMonitor: Any?
     
+    // MARK: Setup Methods
+    
     /// Set up the menu bar item and popover
+    /// - Parameter popover: The configured NSPopover to display when clicking the menu bar item
     func setupMenuBar(with popover: NSPopover) {
         self.popover = popover
         
@@ -27,7 +62,7 @@ class MenuBarManager: NSObject {
             statusButton.action = #selector(togglePopover(_:))
             statusButton.target = self
             
-            // Set up right-click menu (will be implemented later)
+            // Configure to recognize both left and right clicks
             statusButton.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
         
@@ -35,9 +70,23 @@ class MenuBarManager: NSObject {
         setupEventMonitor()
     }
     
-    /// Toggle the popover when clicking the status item
+    /// Set up the event monitor to detect clicks outside the popover
+    private func setupEventMonitor() {
+        eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+            guard let self = self, let popover = self.popover else { return }
+            
+            if popover.isShown {
+                self.closePopover()
+            }
+        }
+    }
+    
+    // MARK: - Status Item Interaction
+    
+    /// Handle clicks on the status item
+    /// - Parameter sender: The status bar button that was clicked
     @objc func togglePopover(_ sender: NSStatusBarButton) {
-        let event = NSApp.currentEvent!
+        guard let event = NSApp.currentEvent else { return }
         
         if event.type == .rightMouseUp {
             // Handle right-click by showing context menu
@@ -48,7 +97,36 @@ class MenuBarManager: NSObject {
         }
     }
     
-    /// Show the context menu for right-click
+    /// Show or hide the popover based on its current state
+    /// - Parameter sender: The status bar button
+    private func togglePopoverVisibility(_ sender: NSStatusBarButton) {
+        if let popover = self.popover {
+            if popover.isShown {
+                closePopover()
+            } else {
+                showPopover(sender)
+            }
+        }
+    }
+    
+    /// Show the popover below the status item
+    /// - Parameter sender: The status bar button to anchor the popover to
+    private func showPopover(_ sender: NSStatusBarButton) {
+        guard let popover = self.popover, let statusBarButton = statusItem?.button else { return }
+        
+        // Position the popover below the status item
+        popover.show(relativeTo: statusBarButton.bounds, of: statusBarButton, preferredEdge: .minY)
+    }
+    
+    /// Close the popover if it's open
+    func closePopover() {
+        popover?.performClose(nil)
+    }
+    
+    // MARK: - Context Menu
+    
+    /// Show the context menu for right-click on the status item
+    /// - Parameter button: The status bar button that was right-clicked
     private func showContextMenu(for button: NSStatusBarButton) {
         // Create the menu
         let menu = NSMenu()
@@ -94,13 +172,16 @@ class MenuBarManager: NSObject {
         menu.popUp(positioning: nil, at: menuPosition, in: nil)
     }
     
-    // Menu item action handlers
+    // MARK: - Menu Action Handlers
+    
+    /// Opens the main app interface by showing the popover
     @objc private func openDaily() {
         if let popover = self.popover, !popover.isShown {
             showPopover(statusItem?.button ?? NSStatusBarButton())
         }
     }
     
+    /// Shows the add task sheet by posting a notification
     @objc private func addNewTask() {
         // First make sure popover is shown
         if let popover = self.popover, !popover.isShown {
@@ -108,9 +189,10 @@ class MenuBarManager: NSObject {
         }
         
         // Post notification to trigger add task sheet
-        NotificationCenter.default.post(name: NSNotification.Name("ShowAddTaskSheet"), object: nil)
+        NotificationCenter.default.post(name: .showAddTaskSheet, object: nil)
     }
     
+    /// Shows the completed tasks view by posting a notification
     @objc private func showCompletedTasks() {
         // First make sure popover is shown
         if let popover = self.popover, !popover.isShown {
@@ -118,55 +200,23 @@ class MenuBarManager: NSObject {
         }
         
         // Post notification to show completed tasks
-        NotificationCenter.default.post(name: NSNotification.Name("ShowCompletedTasks"), object: nil)
+        NotificationCenter.default.post(name: .showCompletedTasks, object: nil)
     }
     
+    /// Resets all tasks to incomplete by posting a notification
     @objc private func resetTasks() {
         // Post notification to reset today's tasks
-        NotificationCenter.default.post(name: NSNotification.Name("ResetTodaysTasks"), object: nil)
+        NotificationCenter.default.post(name: .resetTodaysTasks, object: nil)
     }
     
+    /// Opens the settings window using SwiftUI's SettingsLink API
     @objc private func openSettings() {
         // Post notification to open settings using SettingsLink
-        NotificationCenter.default.post(name: NSNotification.Name("OpenSettingsWithLink"), object: nil)
+        NotificationCenter.default.post(name: .openSettingsWithLink, object: nil)
     }
     
+    /// Terminates the application
     @objc private func quitApp() {
         NSApp.terminate(nil)
-    }
-    
-    /// Show or hide the popover
-    private func togglePopoverVisibility(_ sender: NSStatusBarButton) {
-        if let popover = self.popover {
-            if popover.isShown {
-                closePopover()
-            } else {
-                showPopover(sender)
-            }
-        }
-    }
-    
-    /// Show the popover
-    private func showPopover(_ sender: NSStatusBarButton) {
-        guard let popover = self.popover, let statusBarButton = statusItem?.button else { return }
-        
-        // Position the popover below the status item
-        popover.show(relativeTo: statusBarButton.bounds, of: statusBarButton, preferredEdge: .minY)
-    }
-    
-    /// Close the popover
-    func closePopover() {
-        popover?.performClose(nil)
-    }
-    
-    /// Set up the event monitor to detect clicks outside the popover
-    private func setupEventMonitor() {
-        eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
-            guard let self = self, let popover = self.popover else { return }
-            
-            if popover.isShown {
-                self.closePopover()
-            }
-        }
     }
 }

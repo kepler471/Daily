@@ -11,28 +11,74 @@ import Combine
 import AppKit
 import SwiftUI
 
+// MARK: - Notification Constants
+
+/// Extension for centralizing notification names used in the task reset system
+extension Notification.Name {
+    /// Notification sent when tasks are reset (for UI updates)
+    static let tasksResetNotification = Notification.Name("TasksResetNotification")
+}
+
+// MARK: - SwiftData Extensions
+
+/// Extension to add useful query methods to ModelContext
+extension ModelContext {
+    /// Fetches all completed tasks from the database
+    /// - Returns: Array of completed Task objects
+    /// - Throws: Error if the fetch operation fails
+    func fetchCompletedTasks() throws -> [Task] {
+        let predicate = #Predicate<Task> { task in
+            task.isCompleted == true
+        }
+        
+        let descriptor = FetchDescriptor<Task>(predicate: predicate)
+        return try fetch(descriptor)
+    }
+}
+
+// MARK: - Task Reset Manager
+
 /// Manages the automatic reset of tasks at a specified time each day
+///
+/// TaskResetManager is responsible for:
+/// - Scheduling the daily reset of tasks
+/// - Handling manual reset requests
+/// - Persisting task completion state
+/// - Notifying the UI of changes
 class TaskResetManager: ObservableObject {
+    // MARK: Properties
+    
+    /// Timer that triggers the reset at the scheduled time
     private var timer: Timer?
+    
+    /// The SwiftData model context for database operations
     private var modelContext: ModelContext
+    
+    /// Set to store Combine subscription cancellables
     private var cancellables = Set<AnyCancellable>()
     
     /// The hour (in 24-hour format) when tasks should reset
     private let resetHour: Int = 4
     
+    // MARK: - Initialization
+    
     /// Creates a new TaskResetManager
     /// - Parameter modelContext: The SwiftData model context to use for resetting tasks
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
+        
+        // Schedule the initial reset timer
         scheduleNextReset()
         
-        // Also subscribe to app becoming active to reschedule if needed
+        // Subscribe to app becoming active to reschedule if needed
         NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
             .sink { [weak self] _ in
                 self?.checkAndRescheduleIfNeeded()
             }
             .store(in: &cancellables)
     }
+    
+    // MARK: - Reset Scheduling
     
     /// Schedules the next reset based on the current time
     func scheduleNextReset() {
@@ -52,13 +98,13 @@ class TaskResetManager: ObservableObject {
         }
     }
     
-    /// Calculates the next 4am reset date
+    /// Calculates the next reset date based on the reset hour
     /// - Returns: The next date when tasks should reset
     private func calculateNextResetDate() -> Date {
         let now = Date()
         let calendar = Calendar.current
         
-        // Get today's reset time (4am)
+        // Get today's reset time (at the configured hour)
         var components = calendar.dateComponents([.year, .month, .day], from: now)
         components.hour = resetHour
         components.minute = 0
@@ -68,7 +114,7 @@ class TaskResetManager: ObservableObject {
             fatalError("Failed to create reset date")
         }
         
-        // If it's already past 4am today, schedule for tomorrow
+        // If it's already past the reset time today, schedule for tomorrow
         if now > todayResetDate {
             return calendar.date(byAdding: .day, value: 1, to: todayResetDate) ?? todayResetDate
         } else {
@@ -77,6 +123,9 @@ class TaskResetManager: ObservableObject {
     }
     
     /// Checks if the scheduled reset is still valid and reschedules if not
+    ///
+    /// This is called when the app becomes active to ensure the timer is still valid
+    /// after the system has been asleep or the app has been inactive.
     private func checkAndRescheduleIfNeeded() {
         // If we don't have a timer or it's invalid, reschedule
         if timer == nil || timer?.isValid == false {
@@ -84,7 +133,15 @@ class TaskResetManager: ObservableObject {
         }
     }
     
+    // MARK: - Task Reset Operations
+    
     /// Resets all tasks to incomplete
+    ///
+    /// This method:
+    /// 1. Fetches all completed tasks from the database
+    /// 2. Marks them as incomplete
+    /// 3. Saves the changes
+    /// 4. Notifies the UI to update
     func resetAllTasks() {
         do {
             // Fetch all completed tasks
@@ -105,7 +162,7 @@ class TaskResetManager: ObservableObject {
             // Add a small delay to ensure UI is updated
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 // This notification triggers UI updates
-                NotificationCenter.default.post(name: NSNotification.Name("TasksResetNotification"), object: nil)
+                NotificationCenter.default.post(name: .tasksResetNotification, object: nil)
             }
             
             print("Successfully reset \(count) tasks at \(Date().formatted(date: .abbreviated, time: .standard))")
@@ -123,13 +180,14 @@ class TaskResetManager: ObservableObject {
 
 // MARK: - Environment Key for TaskResetManager
 
-// Define the environment key for accessing the TaskResetManager
+/// Define the environment key for accessing the TaskResetManager
 struct ResetTaskManagerKey: EnvironmentKey {
     static let defaultValue: TaskResetManager? = nil
 }
 
-// Extend the environment values to provide access to the TaskResetManager
+/// Extend the environment values to provide access to the TaskResetManager
 extension EnvironmentValues {
+    /// Access the task reset manager through the SwiftUI environment
     var resetTaskManager: TaskResetManager? {
         get { self[ResetTaskManagerKey.self] }
         set { self[ResetTaskManagerKey.self] = newValue }
