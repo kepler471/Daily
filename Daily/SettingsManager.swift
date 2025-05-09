@@ -10,6 +10,11 @@ import ServiceManagement
 import AppKit
 import Combine
 
+// Extension for notification names
+extension Notification.Name {
+    static let showLoginItemInstructions = Notification.Name("showLoginItemInstructions")
+}
+
 /// Manages application settings and preferences
 class SettingsManager: ObservableObject {
     // Keys for UserDefaults
@@ -71,23 +76,14 @@ class SettingsManager: ObservableObject {
             // since the old APIs are now deprecated and difficult to work with in Swift
             print("Using modern macOS versions is recommended for automatic login item management")
             
-            // When user enables this, show a dialog with instructions
+            // When user enables this, notify observers to show a dialog with instructions
             if launchAtLogin && !UserDefaults.standard.bool(forKey: "hasShownLoginItemInstructions") {
-                DispatchQueue.main.async {
-                    let alert = NSAlert()
-                    alert.messageText = "Launch at Login"
-                    alert.informativeText = "To enable 'Launch at Login', open System Settings, go to 'General > Login Items', and add Daily to the list of applications."
-                    alert.addButton(withTitle: "OK")
-                    alert.addButton(withTitle: "Open Login Items")
-                    
-                    let response = alert.runModal()
-                    if response == .alertSecondButtonReturn {
-                        // Open Login Items preferences
-                        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension")!)
-                    }
-                    
-                    UserDefaults.standard.set(true, forKey: "hasShownLoginItemInstructions")
-                }
+                UserDefaults.standard.set(true, forKey: "hasShownLoginItemInstructions")
+                // Send notification so the SwiftUI view can show appropriate dialog
+                NotificationCenter.default.post(
+                    name: .showLoginItemInstructions,
+                    object: nil
+                )
             }
         }
     }
