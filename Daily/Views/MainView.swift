@@ -10,12 +10,20 @@ import SwiftData
 
 struct MainView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openSettings) private var openSettings
     @State private var showingAddTask = false
     @State private var showingRequiredCompletedTasks = false
     @State private var showingSuggestedCompletedTasks = false
-    @Environment(\.resetTaskManager) private var resetTaskManager
+    @EnvironmentObject private var resetTaskManager: TaskResetManager
     
+    // Default empty init for SwiftUI previews
     init() {
+        // This empty initializer is needed for SwiftUI previews
+        // We'll set up notification handlers in onAppear
+    }
+    
+    // This will be called when the view appears
+    private func setupView() {
         setupNotificationHandlers()
     }
     
@@ -34,7 +42,9 @@ struct MainView: View {
             object: nil,
             queue: .main
         ) { _ in
+            // Show both required and suggested completed tasks
             self.showingRequiredCompletedTasks = true
+            self.showingSuggestedCompletedTasks = true
         }
         
         NotificationCenter.default.addObserver(
@@ -42,7 +52,15 @@ struct MainView: View {
             object: nil,
             queue: .main
         ) { _ in
-            resetTaskManager?.resetAllTasks()
+            resetTaskManager.resetAllTasks()
+        }
+        
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("OpenSettingsWithLink"),
+            object: nil,
+            queue: .main
+        ) { _ in
+            openSettings()
         }
     }
     
@@ -123,6 +141,9 @@ struct MainView: View {
         }
         .animation(.easeInOut(duration: 0.3), value: showingRequiredCompletedTasks)
         .animation(.easeInOut(duration: 0.3), value: showingSuggestedCompletedTasks)
+        .onAppear {
+            setupView()
+        }
     }
 }
 

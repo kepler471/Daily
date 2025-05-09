@@ -73,6 +73,7 @@ struct DailyApp: App {
     func onAppear() {
         appDelegate.modelContainer = sharedModelContainer
         appDelegate.taskResetManager = taskResetManager
+        appDelegate.settingsManager = settingsManager
         
         // Configure the popover with the model context after we've passed the dependencies
         appDelegate.setupPopoverWithContext()

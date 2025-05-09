@@ -84,10 +84,8 @@ class MenuBarManager: NSObject {
         quitItem.target = self
         menu.addItem(quitItem)
         
-        // Display the menu - using the standard NSStatusItem method
-        statusItem?.menu = menu
-        statusItem?.button?.performClick(nil)
-        statusItem?.menu = nil  // Reset after use so left-click works normally
+        // Display the menu
+        menu.popUp(positioning: nil, at: NSPoint(x: button.frame.midX, y: button.frame.midY - 5), in: button)
     }
     
     // Menu item action handlers
@@ -123,8 +121,8 @@ class MenuBarManager: NSObject {
     }
     
     @objc private func openSettings() {
-        // Post notification to open settings window
-        NotificationCenter.default.post(name: NSNotification.Name("OpenSettingsWindow"), object: nil)
+        // Post notification to open settings using SettingsLink
+        NotificationCenter.default.post(name: NSNotification.Name("OpenSettingsWithLink"), object: nil)
     }
     
     @objc private func quitApp() {

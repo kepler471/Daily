@@ -15,6 +15,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var popover = NSPopover()
     var modelContainer: ModelContainer?
     var taskResetManager: TaskResetManager?
+    var settingsManager: SettingsManager?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Configure the application
@@ -26,8 +27,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     // This method will be called after the model container is passed from DailyApp
     func setupPopoverWithContext() {
-        guard let container = modelContainer, let resetManager = taskResetManager else {
-            print("Warning: Model container or reset manager not available.")
+        guard let container = modelContainer, 
+              let resetManager = taskResetManager,
+              let settings = settingsManager else {
+            print("Warning: Required dependencies not available.")
             return
         }
         
@@ -39,6 +42,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let contentView = MainView()
             .modelContainer(container)
             .environmentObject(resetManager)
+            .environmentObject(settings)
         
         // Create a hosting controller for the SwiftUI view
         let hostingController = NSHostingController(rootView: contentView)
