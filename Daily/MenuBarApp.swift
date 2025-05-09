@@ -84,8 +84,14 @@ class MenuBarManager: NSObject {
         quitItem.target = self
         menu.addItem(quitItem)
         
-        // Display the menu
-        menu.popUp(positioning: nil, at: NSPoint(x: button.frame.midX, y: button.frame.midY - 5), in: button)
+        // Display the menu at the standard position for status bar items
+        // Convert the button's frame to window coordinates and use the bottom of the button
+        let buttonRect = button.convert(button.bounds, to: nil)
+        let screenRect = button.window?.convertToScreen(buttonRect)
+        let menuPosition = NSPoint(x: screenRect?.midX ?? 0, y: (screenRect?.minY ?? 0) - 2)
+        
+        // Use standard AppKit behavior for positioning
+        menu.popUp(positioning: nil, at: menuPosition, in: nil)
     }
     
     // Menu item action handlers
