@@ -34,16 +34,19 @@ class KeyboardShortcutManager: NSObject {
     private func registerShortcuts() {
         // Register all the shortcuts that match the menu items
         shortcuts = [
-            KeyboardShortcut(key: "n", modifiers: [.command], action: { 
+            KeyboardShortcut(key: "f", modifiers: [.command], action: {
+                NotificationCenter.default.post(name: .showFocusedTask, object: nil)
+            }),
+            KeyboardShortcut(key: "n", modifiers: [.command], action: {
                 NotificationCenter.default.post(name: .showAddTaskSheet, object: nil)
             }),
-            KeyboardShortcut(key: "c", modifiers: [.command], action: { 
+            KeyboardShortcut(key: "c", modifiers: [.command], action: {
                 NotificationCenter.default.post(name: .showCompletedTasks, object: nil)
             }),
-            KeyboardShortcut(key: "r", modifiers: [.command], action: { 
+            KeyboardShortcut(key: "r", modifiers: [.command], action: {
                 NotificationCenter.default.post(name: .resetTodaysTasks, object: nil)
             }),
-            KeyboardShortcut(key: ",", modifiers: [.command], action: { 
+            KeyboardShortcut(key: ",", modifiers: [.command], action: {
                 NotificationCenter.default.post(name: .openSettingsWithLink, object: nil)
             })
             // Note: We don't add a Quit shortcut as Cmd+Q is already handled by the system

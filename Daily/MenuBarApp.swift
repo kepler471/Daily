@@ -14,21 +14,24 @@ import AppKit
 extension Notification.Name {
     /// Notification to show the add task sheet
     static let showAddTaskSheet = Notification.Name("ShowAddTaskSheet")
-    
+
     /// Notification to show completed tasks view
     static let showCompletedTasks = Notification.Name("ShowCompletedTasks")
-    
+
     /// Notification to reset today's tasks
     static let resetTodaysTasks = Notification.Name("ResetTodaysTasks")
-    
+
     /// Notification to open settings using SwiftUI's SettingsLink
     static let openSettingsWithLink = Notification.Name("OpenSettingsWithLink")
-    
+
     /// Notification to open the main app interface
     static let openDailyApp = Notification.Name("OpenDailyApp")
-    
+
     /// Notification to show the popover (used internally)
     static let openDailyPopover = Notification.Name("OpenDailyPopover")
+
+    /// Notification to show the focused task view
+    static let showFocusedTask = Notification.Name("ShowFocusedTask")
 }
 
 // MARK: - Menu Bar Manager
@@ -114,16 +117,19 @@ class MenuBarManager: NSObject {
     /// - Parameter sender: The status bar button that was clicked
     @objc func togglePopover(_ sender: NSStatusBarButton) {
         guard let event = NSApp.currentEvent else { return }
-        
+
         if event.type == .rightMouseUp {
             // Handle right-click by showing context menu
             showContextMenu(for: sender)
         } else {
             // Handle left-click by toggling the popover
             togglePopoverVisibility(sender)
+
+            // Show focused task view if there are any required tasks to complete
+            checkAndShowFocusedTaskIfNeeded()
         }
     }
-    
+
     /// Show or hide the popover based on its current state
     /// - Parameter sender: The status bar button
     private func togglePopoverVisibility(_ sender: NSStatusBarButton) {
@@ -133,6 +139,15 @@ class MenuBarManager: NSObject {
             } else {
                 showPopover(sender)
             }
+        }
+    }
+
+    /// Check if there are required tasks and show the focused task view
+    private func checkAndShowFocusedTaskIfNeeded() {
+        // Show focused task view after a short delay to let the popover appear first
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            // Post notification to show the focused task view
+            NotificationCenter.default.post(name: .showFocusedTask, object: nil)
         }
     }
     
@@ -157,28 +172,32 @@ class MenuBarManager: NSObject {
     private func showContextMenu(for button: NSStatusBarButton) {
         // Create the menu
         let menu = NSMenu()
-        
+
         // Add menu items
+        let focusedTaskItem = NSMenuItem(title: "Focus on Top Task", action: #selector(showFocusedTask), keyEquivalent: "f")
+        focusedTaskItem.target = self
+        menu.addItem(focusedTaskItem)
+
         let addTaskItem = NSMenuItem(title: "Add Task", action: #selector(addNewTask), keyEquivalent: "n")
         addTaskItem.target = self
         menu.addItem(addTaskItem)
-        
+
         let completedItem = NSMenuItem(title: "Show Completed Tasks", action: #selector(showCompletedTasks), keyEquivalent: "c")
         completedItem.target = self
         menu.addItem(completedItem)
-        
+
         let resetItem = NSMenuItem(title: "Reset Today's Tasks", action: #selector(resetTasks), keyEquivalent: "r")
         resetItem.target = self
         menu.addItem(resetItem)
-        
+
         menu.addItem(NSMenuItem.separator())
-        
+
         let settingsItem = NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
-        
+
         menu.addItem(NSMenuItem.separator())
-        
+
         let quitItem = NSMenuItem(title: "Quit Daily", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
@@ -199,6 +218,9 @@ class MenuBarManager: NSObject {
     @objc private func openDaily() {
         if let popover = self.popover, !popover.isShown {
             showPopover(statusItem?.button ?? NSStatusBarButton())
+
+            // Show focused task view when opening the app
+            checkAndShowFocusedTaskIfNeeded()
         }
     }
     
@@ -219,9 +241,20 @@ class MenuBarManager: NSObject {
         if let popover = self.popover, !popover.isShown {
             showPopover(statusItem?.button ?? NSStatusBarButton())
         }
-        
+
         // Post notification to show completed tasks
         NotificationCenter.default.post(name: .showCompletedTasks, object: nil)
+    }
+
+    /// Shows the focused task view by posting a notification
+    @objc private func showFocusedTask() {
+        // First make sure popover is shown
+        if let popover = self.popover, !popover.isShown {
+            showPopover(statusItem?.button ?? NSStatusBarButton())
+        }
+
+        // Post notification to show focused task view
+        NotificationCenter.default.post(name: .showFocusedTask, object: nil)
     }
     
     /// Resets all tasks to incomplete by posting a notification

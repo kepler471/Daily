@@ -20,44 +20,58 @@ import SwiftData
 /// - Navigation to sheets and overlays for task management
 struct MainView: View {
     // MARK: Environment & State
-    
+
     /// The SwiftData model context for database operations
     @Environment(\.modelContext) private var modelContext
-    
+
     /// Access to the system settings API
     @Environment(\.openSettings) private var openSettings
-    
+
     /// Whether the add task sheet is being displayed
     @State private var showingAddTask = false
-    
+
     /// Whether the completed required tasks overlay is being displayed
     @State private var showingRequiredCompletedTasks = false
-    
+
     /// Whether the completed suggested tasks overlay is being displayed
     @State private var showingSuggestedCompletedTasks = false
-    
+
+    /// Whether the focused task view is being displayed
+    @State private var showingFocusedTask = false
+
     /// Access to the task reset functionality
     @EnvironmentObject private var resetTaskManager: TaskResetManager
-    
+
+    /// Query for checking if there are any required tasks
+    @Query(filter: Task.Predicates.byCategoryAndCompletion(category: .required, isCompleted: false),
+           sort: [SortDescriptor(\Task.order)]) private var requiredTasks: [Task]
+
     // MARK: - Initialization
-    
+
     /// Default empty initializer required for SwiftUI previews
     init() {
         // This empty initializer is needed for SwiftUI previews
         // We'll set up notification handlers in onAppear
     }
-    
+
     // MARK: - Setup Methods
-    
+
     /// Configure the view when it first appears
     private func setupView() {
         setupNotificationHandlers()
+
+        // Show focused task view on app launch if there are required tasks
+        if !requiredTasks.isEmpty {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.showingFocusedTask = true
+            }
+        }
     }
-    
+
     /// Register for notifications from the menu bar actions and keyboard shortcuts
     private func setupNotificationHandlers() {
         // Set up notification observers for menu bar actions and keyboard shortcuts
-        
+
         // Show add task sheet notification
         NotificationCenter.default.addObserver(
             forName: .showAddTaskSheet,
@@ -66,7 +80,7 @@ struct MainView: View {
         ) { _ in
             self.showingAddTask = true
         }
-        
+
         // Show completed tasks notification
         NotificationCenter.default.addObserver(
             forName: .showCompletedTasks,
@@ -77,7 +91,7 @@ struct MainView: View {
             self.showingRequiredCompletedTasks = true
             self.showingSuggestedCompletedTasks = true
         }
-        
+
         // Reset tasks notification
         NotificationCenter.default.addObserver(
             forName: .resetTodaysTasks,
@@ -86,7 +100,7 @@ struct MainView: View {
         ) { _ in
             self.resetTaskManager.resetAllTasks()
         }
-        
+
         // Open settings notification
         NotificationCenter.default.addObserver(
             forName: .openSettingsWithLink,
@@ -95,7 +109,15 @@ struct MainView: View {
         ) { _ in
             self.openSettings()
         }
-        
+
+        // Add notification for showing focused task view
+        NotificationCenter.default.addObserver(
+            forName: .showFocusedTask,
+            object: nil,
+            queue: .main
+        ) { _ in
+            self.showingFocusedTask = true
+        }
     }
     
     // MARK: - View Body
@@ -163,17 +185,24 @@ struct MainView: View {
             }
             
             // MARK: Overlays
-            
+
             // Completed tasks overlay for Required category
             if showingRequiredCompletedTasks {
                 CompletedTaskView(category: .required, isPresented: $showingRequiredCompletedTasks)
                     .transition(.opacity)
                     .zIndex(100)
             }
-            
+
             // Completed tasks overlay for Suggested category
             if showingSuggestedCompletedTasks {
                 CompletedTaskView(category: .suggested, isPresented: $showingSuggestedCompletedTasks)
+                    .transition(.opacity)
+                    .zIndex(100)
+            }
+
+            // Focused task overlay
+            if showingFocusedTask {
+                FocusedTaskView(isPresented: $showingFocusedTask)
                     .transition(.opacity)
                     .zIndex(100)
             }
@@ -184,6 +213,7 @@ struct MainView: View {
         }
         .animation(.easeInOut(duration: 0.3), value: showingRequiredCompletedTasks)
         .animation(.easeInOut(duration: 0.3), value: showingSuggestedCompletedTasks)
+        .animation(.easeInOut(duration: 0.3), value: showingFocusedTask)
         .onAppear {
             setupView()
         }

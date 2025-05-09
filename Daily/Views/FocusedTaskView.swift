@@ -1,0 +1,232 @@
+//
+//  FocusedTaskView.swift
+//  Daily
+//
+//  Created by Stelios Georgiou on 09/05/2025.
+//
+
+import SwiftUI
+import SwiftData
+
+// MARK: - Focused Task View
+
+/// A fullscreen overlay view that displays the top required task
+///
+/// FocusedTaskView provides a modal interface for:
+/// - Viewing the highest priority required task
+/// - Marking the task as complete
+/// - Interacting with the task with visual feedback
+struct FocusedTaskView: View {
+    // MARK: Properties
+    
+    /// Database context for saving task changes
+    @Environment(\.modelContext) private var modelContext
+    
+    /// Live query for required tasks, sorted by order
+    @Query private var requiredTasks: [Task]
+    
+    /// Binding to control the visibility of this view
+    @Binding var isPresented: Bool
+    
+    /// Tracks if the task is being hovered for hover effects
+    @State private var isHovered: Bool = false
+    
+    // MARK: - Initialization
+    
+    /// Creates a new focused task view that shows the top required task
+    /// - Parameter isPresented: Binding to control the visibility of the view
+    init(isPresented: Binding<Bool>) {
+        self._isPresented = isPresented
+        
+        // Configure sorting to ensure consistent display order
+        let sortDescriptors = [
+            SortDescriptor(\Task.order),
+            SortDescriptor(\Task.createdAt)
+        ]
+        
+        // Query to get required tasks that are not completed
+        _requiredTasks = Query(
+            filter: Task.Predicates.byCategoryAndCompletion(category: .required, isCompleted: false),
+            sort: sortDescriptors
+        )
+    }
+    
+    // MARK: - Computed Properties
+    
+    /// Returns the top required task if available
+    private var topTask: Task? {
+        return requiredTasks.first
+    }
+    
+    // MARK: - View Body
+    
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            // MARK: Background
+            
+            // Translucent blurred background overlay
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .opacity(0.85)
+                .ignoresSafeArea()
+            
+            // MARK: Close Button
+            
+            Button(action: { isPresented = false }) {
+                Image(systemName: "xmark.circle.fill")
+                    .symbolRenderingMode(.hierarchical)
+                    .font(.title)
+                    .foregroundColor(.secondary)
+                    .padding()
+            }
+            .accessibilityLabel("Close")
+            
+            // MARK: Content
+            
+            VStack(spacing: 20) {
+                // Title section
+                Text("Focus on This Task")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 40)
+                
+                // MARK: Task Display
+                
+                if let task = topTask {
+                    // Display the task
+                    focusedTaskCard(for: task)
+                        .scaleEffect(isHovered ? 1.05 : 1.0)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isHovered)
+                        .onHover { hovering in
+                            isHovered = hovering
+                        }
+                        .padding(.horizontal, 40)
+                        .padding(.vertical, 20)
+                } else {
+                    // Empty state
+                    Spacer()
+                    Text("No required tasks")
+                        .font(.title2)
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                    Spacer()
+                }
+            }
+            .padding(.top, 60)
+        }
+    }
+    
+    // MARK: - Task Card View
+    
+    /// Creates a card view for the focused task
+    /// - Parameter task: The task to display
+    /// - Returns: A SwiftUI view representing the task card
+    @ViewBuilder
+    private func focusedTaskCard(for task: Task) -> some View {
+        VStack(spacing: 20) {
+            // MARK: Task Details
+            
+            // Task title and scheduled time (if exists)
+            VStack(alignment: .center, spacing: 8) {
+                Text(task.title)
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.center)
+                
+                if let scheduledTime = task.scheduledTime {
+                    HStack {
+                        Image(systemName: "clock")
+                            .foregroundColor(.secondary)
+                        
+                        Text(scheduledTime, format: .dateTime.hour().minute())
+                            .foregroundColor(.secondary)
+                    }
+                    .font(.headline)
+                }
+            }
+            .padding(.bottom, 20)
+            
+            // MARK: Category Badge
+            
+            Text("Required")
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(Color.blue.opacity(0.2))
+                )
+                .foregroundColor(.blue)
+            
+            // MARK: Complete Button
+            
+            Button(action: {
+                toggleTaskCompletion(task)
+                // Close the view after marking as complete
+                isPresented = false
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle")
+                    Text("Mark as Complete")
+                }
+                .font(.headline)
+                .foregroundColor(.white)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(
+                    Capsule()
+                        .fill(Color.green)
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+            .accessibilityLabel("Mark \(task.title) as complete")
+        }
+        .padding(40)
+        .background(
+            Rectangle()
+                .fill(.regularMaterial)
+                .opacity(0.9)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+    }
+    
+    // MARK: - Actions
+    
+    /// Toggles the completion state of a task and saves the change
+    /// - Parameter task: The task to toggle
+    private func toggleTaskCompletion(_ task: Task) {
+        // Toggle task completion state
+        task.isCompleted.toggle()
+        
+        do {
+            // Save the changes to the model
+            try modelContext.save()
+            
+            // Add a small delay to allow the UI to update
+            // This helps the SwiftData change notifications propagate
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                // This is just to trigger a UI refresh
+                withAnimation {
+                    // No need to do anything here - just triggering a refresh
+                }
+            }
+        } catch {
+            print("Error toggling task completion: \(error.localizedDescription)")
+        }
+    }
+}
+
+// MARK: - Preview
+
+#Preview("Focused Task") {
+    FocusedTaskView(isPresented: .constant(true))
+        .modelContainer(TaskMockData.createPreviewContainer())
+}
