@@ -2,30 +2,64 @@
 //  TaskStackView.swift
 //  Daily
 //
-//  Created using Claude Code.
+//  Created by Stelios Georgiou on 07/05/2025.
 //
 
 import SwiftUI
 import SwiftData
 
 // MARK: - TaskStackView
+
+/// A view that displays tasks in a visually pleasing, overlapping stack
+///
+/// TaskStackView provides a highly interactive task display with:
+/// - Stacked card layout with configurable spacing and scaling
+/// - Hover interactions to fan out cards for easier selection
+/// - Custom animations for task completion and card repositioning
+/// - Support for multiple layout styles through different initialization options
 struct TaskStackView: View {
-    // Data source
+    // MARK: - Properties
+    
+    /// Database context for saving task changes
     @Environment(\.modelContext) private var modelContext
+    
+    /// Query for retrieving tasks from the database
     @Query private var tasks: [Task]
     
-    // State for hover effects
+    /// Currently hovered task index for interactive effects
     @State private var hoveredTaskIndex: Int? = nil
+    
+    /// Whether the stack is in selection mode (fanned out)
     @State private var isSelectionModeActive: Bool = false
     
-    // Stack configuration
+    /// Constant vertical offset between cards in the stack
     var verticalOffset: CGFloat
+    
+    /// Optional function that calculates vertical offset based on index
     var offsetByIndex: ((Int) -> CGFloat)?
+    
+    /// Optional function that calculates scale factor based on index
     var scaleByIndex: ((Int) -> CGFloat)?
+    
+    /// Scale factor for cards in the stack (1.0 = no scaling)
     var scaleAmount: CGFloat
+    
+    /// Optional category filter for the tasks
     var category: TaskCategory?
     
+    /// Set of tasks that should be visually removed due to completion
+    @State private var tasksToRemove: Set<ObjectIdentifier> = []
+    
+    /// Whether the stack is currently animating repositioning
+    @State private var isRepositioning: Bool = false
+    
+    // MARK: - Initialization
+    
     /// Initialize with a constant vertical offset and optional scale
+    /// - Parameters:
+    ///   - category: Optional category to filter tasks by
+    ///   - verticalOffset: Constant spacing between cards in the stack
+    ///   - scale: Scale factor for cards in the stack (1.0 = no scaling)
     init(category: TaskCategory? = nil, verticalOffset: CGFloat = 20, scale: CGFloat = 1.0) {
         self.verticalOffset = verticalOffset
         self.offsetByIndex = nil
@@ -54,6 +88,10 @@ struct TaskStackView: View {
     }
     
     /// Initialize with a function mapping index to offset and optional scale
+    /// - Parameters:
+    ///   - category: Optional category to filter tasks by
+    ///   - offsetByIndex: Function that calculates vertical offset based on card index
+    ///   - scale: Scale factor for cards in the stack (1.0 = no scaling)
     init(category: TaskCategory? = nil, offsetByIndex: @escaping (Int) -> CGFloat, scale: CGFloat = 1.0) {
         self.verticalOffset = 0 // Not used in this initialization
         self.offsetByIndex = offsetByIndex
@@ -82,6 +120,10 @@ struct TaskStackView: View {
     }
     
     /// Initialize with functions for both offset and scale
+    /// - Parameters:
+    ///   - category: Optional category to filter tasks by
+    ///   - offsetByIndex: Function that calculates vertical offset based on card index
+    ///   - scaleByIndex: Function that calculates scale factor based on card index
     init(category: TaskCategory? = .required, offsetByIndex: @escaping (Int) -> CGFloat, scaleByIndex: @escaping (Int) -> CGFloat) {
         self.verticalOffset = 0 // Not used in this initialization
         self.offsetByIndex = offsetByIndex
@@ -109,22 +151,19 @@ struct TaskStackView: View {
         }
     }
     
-    // Track tasks that should be removed after completion
-    @State private var tasksToRemove: Set<ObjectIdentifier> = []
+    // MARK: - Body
     
-    // Track whether we're in a repositioning animation
-    @State private var isRepositioning: Bool = false
-    
-    // MARK: - ZStack
     var body: some View {
-        // Reset the removed tasks when tasks change
-        // This ensures consistency when tasks are modified outside this view
+        // Stack layout with cards
         ZStack {
             ForEach(Array(tasks.enumerated()), id: \.element.id) { index, task in
                 // Only show tasks that aren't marked for removal
                 // Let the animation handle tasks being completed
                 if !tasksToRemove.contains(ObjectIdentifier(task)) {
                     taskCardView(for: task, at: index)
+                        .accessibilityElement(children: .contain)
+                        .accessibilityLabel("\(task.title), task \(index + 1) of \(tasks.count)")
+                        .accessibilityHint("Hover to fan out all tasks, or click to mark as complete")
                 }
             }
         }
@@ -152,11 +191,17 @@ struct TaskStackView: View {
         }
     }
     
-    // MARK: - Task mechanics
-    // Extract task card creation to a separate function to reduce complexity
+    // MARK: - Card View Builder
+    
+    /// Creates a task card view with animations and transitions
+    /// - Parameters:
+    ///   - task: The task to display
+    ///   - index: The index of the task in the stack
+    /// - Returns: A configured TaskCardView with animations and effects
     private func taskCardView(for task: Task, at index: Int) -> some View {
         
-        // MARK: - Animations
+        // MARK: - Animation Setup
+        
         // Setup the transition for removal animation
         let insertionTransition = AnyTransition.opacity.combined(with: .scale)
         
@@ -166,8 +211,6 @@ struct TaskStackView: View {
         // Create the removal transition in stages to avoid complex expressions
         let removalStep1 = slowOpacity.combined(with: .offset(x: 250, y: CGFloat(-index * 50) - 250))
         let removalStep2 = removalStep1.combined(with: .scale(scale: 0.2))
-        // Note: We can't use rotation3DEffect directly as a transition
-        // Just use the steps we already have
         let removalTransition = removalStep2
         
         // The complete transition combines both insertion and removal transitions
@@ -182,7 +225,7 @@ struct TaskStackView: View {
             calculateYOffset(for: index)
             
         return TaskCardView(task: task) {
-            // Set completion state first for animation
+            // Handle task completion toggle
             let newCompletionState = !task.isCompleted
             
             // Start animation first, then update model
@@ -255,8 +298,12 @@ struct TaskStackView: View {
                   value: index)
     }
     
-    // MARK: - Hover
-    // Handle hover state changes
+    // MARK: - Hover Handling
+    
+    /// Handles mouse hover interactions to trigger fan-out effect
+    /// - Parameters:
+    ///   - isHovered: Whether the card is currently being hovered
+    ///   - index: The index of the card being hovered
     private func handleHover(isHovered: Bool, at index: Int) {
         if isHovered {
             // Card is being hovered over
@@ -283,8 +330,11 @@ struct TaskStackView: View {
         }
     }
     
-    // MARK: - Overlapping
+    // MARK: - Layout Calculations
+    
     /// Calculate the Y offset for a card at the given index
+    /// - Parameter index: The index of the card in the stack
+    /// - Returns: The vertical offset to apply to the card
     private func calculateYOffset(for index: Int) -> CGFloat {
         if let offsetByIndex = offsetByIndex {
             // Use the offset function if provided
@@ -296,7 +346,10 @@ struct TaskStackView: View {
     }
     
     // MARK: - Scaling
+    
     /// Calculate the scale for a card at the given index
+    /// - Parameter index: The index of the card in the stack
+    /// - Returns: The scale factor to apply to the card
     private func calculateScale(for index: Int) -> CGFloat {
         // When cards are fanned out in selection mode, apply distance-based scaling
         if isSelectionModeActive {
@@ -343,8 +396,11 @@ struct TaskStackView: View {
         }
     }
     
-    // MARK: - Fanning
+    // MARK: - Fan-out Layout
+    
     /// Calculate an expanded vertical offset for fan-out view in selection mode
+    /// - Parameter index: The index of the card in the stack
+    /// - Returns: The vertical offset to apply in fan-out mode
     private func calculateExpandedOffset(for index: Int) -> CGFloat {
         let totalCards = tasks.count
         
@@ -385,8 +441,11 @@ struct TaskStackView: View {
         return basePosition + hoverBonus
     }
     
-    // MARK: - Z-index
+    // MARK: - Z-index Calculation
+    
     /// Calculate the z-index for a card, taking into account hover state
+    /// - Parameter index: The index of the card in the stack
+    /// - Returns: The z-index value to determine visual stacking order
     private func calculateZIndex(for index: Int) -> Double {
         // Default stacking: top card has highest z-index
         let baseZIndex = Double(tasks.count - index)

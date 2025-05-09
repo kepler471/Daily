@@ -2,25 +2,43 @@
 //  SettingsView.swift
 //  Daily
 //
-//  Created with Claude Code.
+//  //  Created by Stelios Georgiou on 08/05/2025.
 //
 
 import SwiftUI
 
+/// A view that provides user interface for configuring app settings
+///
+/// SettingsView manages configuration options for the application, including:
+/// - Launch at login behavior
+/// - Task reset scheduling  
+/// - Options to restore default settings
 struct SettingsView: View {
+    // MARK: - Properties
+    
+    /// Reference to the settings manager for persistent storage
     @EnvironmentObject private var settingsManager: SettingsManager
     
-    // State for UI interactions
+    /// Controls visibility of the explanation popover for launch at login
     @State private var showingLaunchExplanation = false
+    
+    /// Controls visibility of the confirmation dialog for restoring defaults
     @State private var showingRestoreConfirmation = false
+    
+    /// Controls visibility of the login items system settings instructions
     @State private var showingLoginItemsInstructions = false
+    
+    // MARK: - Body
     
     var body: some View {
         Form {
+            // MARK: General Settings
+            
             Section(header: Text("General")) {
                 HStack {
                     Toggle("Launch at Login", isOn: $settingsManager.launchAtLogin)
                         .toggleStyle(.switch)
+                        .accessibilityIdentifier("launchAtLoginToggle")
                     
                     Spacer()
                     
@@ -32,6 +50,7 @@ struct SettingsView: View {
                             .foregroundColor(.secondary)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Launch at login help")
                     .popover(isPresented: $showingLaunchExplanation, arrowEdge: .top) {
                         VStack(alignment: .leading, spacing: 10) {
                             Text("Launch at Login")
@@ -54,6 +73,8 @@ struct SettingsView: View {
                 }
             }
             
+            // MARK: Task Reset Settings
+            
             Section(header: Text("Task Reset")) {
                 HStack {
                     Text("Reset tasks daily at:")
@@ -67,6 +88,7 @@ struct SettingsView: View {
                     }
                     .labelsHidden()
                     .frame(width: 100)
+                    .accessibilityIdentifier("resetHourPicker")
                 }
                 
                 Text("Tasks will reset automatically at the specified time each day.")
@@ -74,12 +96,15 @@ struct SettingsView: View {
                     .foregroundColor(.secondary)
             }
             
+            // MARK: Reset to Defaults
+            
             Section {
                 Button("Restore Defaults") {
                     // Show SwiftUI confirmation dialog
                     showingRestoreConfirmation = true
                 }
                 .foregroundColor(.red)
+                .accessibilityIdentifier("restoreDefaultsButton")
                 .confirmationDialog(
                     "Restore Default Settings",
                     isPresented: $showingRestoreConfirmation,
@@ -117,13 +142,19 @@ struct SettingsView: View {
         }
     }
     
+    // MARK: - Helper Methods
+    
     /// Format hour for display in 12-hour format
+    /// - Parameter hour: The hour in 24-hour format (0-23)
+    /// - Returns: A formatted string in 12-hour format with AM/PM indicator
     private func formatHour(_ hour: Int) -> String {
         let hourIn12Format = hour % 12 == 0 ? 12 : hour % 12
         let amPm = hour < 12 ? "AM" : "PM"
         return "\(hourIn12Format):00 \(amPm)"
     }
 }
+
+// MARK: - Previews
 
 #Preview {
     SettingsView()

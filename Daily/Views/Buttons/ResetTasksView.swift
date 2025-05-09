@@ -2,14 +2,20 @@
 //  ResetTasksView.swift
 //  Daily
 //
-//  Created by Claude on 08/05/2025.
+//  Created by Stelios Georgiou on 08/05/2025.
 //
 
 import SwiftUI
 import SwiftData
 
+/// A button view that allows users to manually reset all tasks to incomplete
 struct ResetTasksView: View {
+    // MARK: - Properties
+    
+    /// Reference to the task reset manager for handling reset operations
     @EnvironmentObject private var taskResetManager: TaskResetManager
+    
+    // MARK: - Body
     
     var body: some View {
         Button(action: {
@@ -25,8 +31,12 @@ struct ResetTasksView: View {
                 )
         }
         .help("Reset all tasks to incomplete")
+        .accessibilityLabel("Reset all tasks")
+        .accessibilityHint("Marks all tasks as incomplete to start a new day")
     }
 }
+
+// MARK: - Previews
 
 #Preview {
     // Use a simple preview container with in-memory storage

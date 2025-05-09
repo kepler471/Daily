@@ -8,9 +8,17 @@
 import SwiftUI
 import SwiftData
 
+/// A button view that triggers the task creation sheet
 struct AddTaskButtonView: View {
+    // MARK: - Properties
+    
+    /// Binding to control the presentation of the add task sheet
     @Binding var showingAddTask: Bool
+    
+    /// The color theme for the button (defaults to blue)
     var color: Color = .blue
+    
+    // MARK: - Body
     
     var body: some View {
         Button {
@@ -29,39 +37,63 @@ struct AddTaskButtonView: View {
         .buttonStyle(.plain)
         .contentShape(Circle())
         .focusable(false)
+        .accessibilityLabel("Add new task")
     }
 }
 
+/// A view that provides the user interface for creating a new task
 struct AddTaskView: View {
+    // MARK: - Environment and State
+    
+    /// The model context for saving new tasks
     @Environment(\.modelContext) private var modelContext
+    
+    /// Environment value for dismissing the sheet
     @Environment(\.dismiss) private var dismiss
     
+    /// The title of the new task
     @State private var title = ""
+    
+    /// The selected category for the new task
     @State private var selectedCategory: TaskCategory = .required
+    
+    /// Whether the task has a scheduled time
     @State private var hasScheduledTime = false
+    
+    /// The scheduled time for the task if enabled
     @State private var scheduledTime = Date()
+    
+    /// Focus state for the title text field
     @FocusState private var isTitleFieldFocused: Bool
+    
+    // MARK: - Body
     
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
+                // Task title input field
                 TextField("Task name", text: $title)
                     .font(.system(size: 18, weight: .medium))
                     .padding(.horizontal, 12)
                     .padding(.vertical, 14)
                     .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.1)))
                     .focused($isTitleFieldFocused)
+                    .accessibilityIdentifier("taskTitleField")
                 
-                Picker("", selection: $selectedCategory) {
+                // Category selection
+                Picker("Task Category", selection: $selectedCategory) {
                     Text("Required").tag(TaskCategory.required)
                     Text("Suggested").tag(TaskCategory.suggested)
                 }
                 .pickerStyle(.segmented)
                 .padding(.vertical, 5)
+                .accessibilityIdentifier("categoryPicker")
                 
+                // Time scheduling options
                 HStack {
-                    Toggle("", isOn: $hasScheduledTime)
+                    Toggle("Schedule Time", isOn: $hasScheduledTime)
                         .labelsHidden()
+                        .accessibilityLabel("Schedule specific time")
                     
                     Text("Time")
                         .foregroundColor(.secondary)
@@ -70,15 +102,17 @@ struct AddTaskView: View {
                     Spacer()
                     
                     if hasScheduledTime {
-                        DatePicker("", selection: $scheduledTime, displayedComponents: .hourAndMinute)
+                        DatePicker("Scheduled Time", selection: $scheduledTime, displayedComponents: .hourAndMinute)
                             .labelsHidden()
                             .fixedSize()
+                            .accessibilityLabel("Select time for task")
                     }
                 }
                 .padding(.vertical, 5)
                 
                 Spacer()
                 
+                // Add task button
                 Button("Add Task") {
                     addTask()
                     dismiss()
@@ -93,6 +127,8 @@ struct AddTaskView: View {
                 )
                 .buttonStyle(.plain)
                 .focusable(false)
+                .accessibilityIdentifier("addTaskButton")
+                .accessibilityHint("Creates a new task with the provided details")
             }
             .padding(20)
             .navigationTitle("New Task")
@@ -105,6 +141,7 @@ struct AddTaskView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .accessibilityIdentifier("cancelButton")
                 }
             }
         }
@@ -115,6 +152,9 @@ struct AddTaskView: View {
         }
     }
     
+    // MARK: - Helper Methods
+    
+    /// Creates and saves a new task with the current input values
     private func addTask() {
         withAnimation {
             let newTask = Task(
@@ -127,6 +167,8 @@ struct AddTaskView: View {
         }
     }
     
+    /// Calculates the next available order value for sorting tasks
+    /// - Returns: The next order value for the selected category
     private func getNextOrder() -> Int {
         do {
             let categoryString = selectedCategory.rawValue
@@ -146,6 +188,8 @@ struct AddTaskView: View {
         }
     }
 }
+
+// MARK: - Previews
 
 #Preview {
     AddTaskButtonView(showingAddTask: .constant(false))
