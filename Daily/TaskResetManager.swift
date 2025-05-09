@@ -19,22 +19,8 @@ extension Notification.Name {
     static let tasksResetNotification = Notification.Name("TasksResetNotification")
 }
 
-// MARK: - SwiftData Extensions
-
-/// Extension to add useful query methods to ModelContext
-extension ModelContext {
-    /// Fetches all completed tasks from the database
-    /// - Returns: Array of completed Task objects
-    /// - Throws: Error if the fetch operation fails
-    func fetchCompletedTasks() throws -> [Task] {
-        let predicate = #Predicate<Task> { task in
-            task.isCompleted == true
-        }
-        
-        let descriptor = FetchDescriptor<Task>(predicate: predicate)
-        return try fetch(descriptor)
-    }
-}
+// MARK: - ModelContext Extensions
+// Note: ModelContext extensions are centralized in Task+Extensions.swift
 
 // MARK: - Task Reset Manager
 
@@ -100,7 +86,7 @@ class TaskResetManager: ObservableObject {
     
     /// Calculates the next reset date based on the reset hour
     /// - Returns: The next date when tasks should reset
-    private func calculateNextResetDate() -> Date {
+    internal func calculateNextResetDate() -> Date {
         let now = Date()
         let calendar = Calendar.current
         
@@ -145,7 +131,7 @@ class TaskResetManager: ObservableObject {
     func resetAllTasks() {
         do {
             // Fetch all completed tasks
-            let completedTasks = try modelContext.fetchCompletedTasks()
+            let completedTasks = try modelContext.fetchCompletedTasks(category: nil)
             let count = completedTasks.count
             
             // Mark each as incomplete
