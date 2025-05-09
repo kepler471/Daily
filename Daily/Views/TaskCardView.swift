@@ -8,13 +8,33 @@
 import SwiftUI
 import SwiftData
 
+// MARK: - Task Card View
+
+/// A card view that displays a single task with its details and actions
+///
+/// TaskCardView is responsible for:
+/// - Displaying the task's title, category, and scheduled time (if any)
+/// - Showing a different visual appearance for completed vs. incomplete tasks
+/// - Providing a button to toggle the task's completion status
+/// - Creating a visually attractive card with appropriate styling based on task properties
 struct TaskCardView: View {
+    // MARK: Properties
+    
+    /// The task to display, using @Bindable for two-way binding
     @Bindable var task: Task
+    
+    /// Callback that's invoked when the completion status is toggled
     var onToggleComplete: () -> Void
+    
+    // MARK: - Body
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            // MARK: Header Row
+            
+            // Task title and metadata in a row
             HStack {
+                // Task title with strikethrough when completed
                 Text(task.title)
                     .font(.headline)
                     .foregroundColor(task.isCompleted ? .secondary : .primary)
@@ -22,6 +42,7 @@ struct TaskCardView: View {
                 
                 Spacer()
                 
+                // Scheduled time with clock icon (if available)
                 if let scheduledTime = task.scheduledTime {
                     HStack {
                         Image(systemName: "clock")
@@ -35,17 +56,21 @@ struct TaskCardView: View {
                 
                 Spacer()
                 
+                // Category badge (Required/Suggested)
                 categoryBadge
             }
             
-
+            // MARK: Action Row
             
+            // Action buttons row
             HStack {
                 Spacer()
                 
+                // Complete/reopen button
                 completionButton
             }
         }
+        // MARK: Card Styling
         .padding()
         .background(cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 16))
@@ -55,15 +80,20 @@ struct TaskCardView: View {
         .padding(.vertical, 6)
     }
     
+    // MARK: - UI Components
+    
+    /// Background for the card that changes based on task completion status
     private var cardBackground: some View {
         Group {
             if task.isCompleted {
+                // Completed task style - faded with gray border
                 Color(.windowBackgroundColor).opacity(0.8)
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(Color.gray.opacity(0.3), lineWidth: 1)
                     )
             } else {
+                // Active task style - gradient border based on category
                 Color(.windowBackgroundColor)
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
@@ -83,6 +113,7 @@ struct TaskCardView: View {
         }
     }
     
+    /// Badge that displays the task category (Required/Suggested)
     private var categoryBadge: some View {
         Text(task.category == .required ? "Required" : "Suggested")
             .font(.caption)
@@ -96,6 +127,7 @@ struct TaskCardView: View {
             .foregroundColor(task.category == .required ? .blue : .purple)
     }
     
+    /// Button for toggling task completion status
     private var completionButton: some View {
         Button(action: onToggleComplete) {
             HStack(spacing: 4) {
@@ -115,7 +147,9 @@ struct TaskCardView: View {
     }
 }
 
-#Preview {
+// MARK: - Previews
+
+#Preview("Task Card") {
     let container = TaskMockData.createPreviewContainer()
     let context = ModelContext(container)
     let task = Task(
