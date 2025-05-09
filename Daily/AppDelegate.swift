@@ -36,6 +36,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     /// Manager for app settings and preferences
     var settingsManager: SettingsManager?
     
+    /// Manager for handling keyboard shortcuts
+    private var keyboardShortcutManager = KeyboardShortcutManager()
+    
     // MARK: - Application Lifecycle
     
     /// Called when the application has finished launching
@@ -46,6 +49,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Set up the menu bar item with our configured popover
         menuBarManager.setupMenuBar(with: popover)
+        
+        // Start monitoring for keyboard shortcuts
+        keyboardShortcutManager.startMonitoring()
     }
     
     // MARK: - Popover Configuration
@@ -78,5 +84,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Set the hosting view controller as the popover's content
         popover.contentViewController = hostingController
+    }
+    
+    /// Called when the application is about to terminate
+    /// - Parameter notification: The notification object
+    func applicationWillTerminate(_ notification: Notification) {
+        // Stop keyboard shortcut monitoring when the app terminates
+        keyboardShortcutManager.stopMonitoring()
     }
 }

@@ -54,9 +54,9 @@ struct MainView: View {
         setupNotificationHandlers()
     }
     
-    /// Register for notifications from the menu bar actions
+    /// Register for notifications from the menu bar actions and keyboard shortcuts
     private func setupNotificationHandlers() {
-        // Set up notification observers for menu bar actions
+        // Set up notification observers for menu bar actions and keyboard shortcuts
         
         // Show add task sheet notification
         NotificationCenter.default.addObserver(
@@ -95,6 +95,7 @@ struct MainView: View {
         ) { _ in
             self.openSettings()
         }
+        
     }
     
     // MARK: - View Body

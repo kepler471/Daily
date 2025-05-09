@@ -23,6 +23,12 @@ extension Notification.Name {
     
     /// Notification to open settings using SwiftUI's SettingsLink
     static let openSettingsWithLink = Notification.Name("OpenSettingsWithLink")
+    
+    /// Notification to open the main app interface
+    static let openDailyApp = Notification.Name("OpenDailyApp")
+    
+    /// Notification to show the popover (used internally)
+    static let openDailyPopover = Notification.Name("OpenDailyPopover")
 }
 
 // MARK: - Menu Bar Manager
@@ -68,6 +74,27 @@ class MenuBarManager: NSObject {
         
         // Set up an event monitor to detect clicks outside the popover
         setupEventMonitor()
+        
+        // Set up notification handlers for keyboard shortcuts
+        setupNotificationHandlers()
+    }
+    
+    /// Set up notification handlers for keyboard shortcut actions
+    private func setupNotificationHandlers() {
+        // Handle popover opening notification (internal)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleShowPopover),
+            name: .openDailyPopover,
+            object: nil
+        )
+    }
+    
+    /// Handle request to show the popover from other components
+    @objc private func handleShowPopover() {
+        if let button = statusItem?.button, let popover = self.popover, !popover.isShown {
+            showPopover(button)
+        }
     }
     
     /// Set up the event monitor to detect clicks outside the popover
@@ -132,12 +159,6 @@ class MenuBarManager: NSObject {
         let menu = NSMenu()
         
         // Add menu items
-        let openItem = NSMenuItem(title: "Open Daily", action: #selector(openDaily), keyEquivalent: "o")
-        openItem.target = self
-        menu.addItem(openItem)
-        
-        menu.addItem(NSMenuItem.separator())
-        
         let addTaskItem = NSMenuItem(title: "Add Task", action: #selector(addNewTask), keyEquivalent: "n")
         addTaskItem.target = self
         menu.addItem(addTaskItem)
