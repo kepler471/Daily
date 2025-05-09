@@ -8,12 +8,19 @@
 import SwiftUI
 import SwiftData
 
+/// A button view that allows users to reset all data and recreate sample tasks
 struct ResetDataView: View {
+    // MARK: - Properties
+    
+    /// The model context for database operations
     @Environment(\.modelContext) private var modelContext
+    
+    /// Optional callback that gets triggered after data reset
     var onReset: (() -> Void)?
     
+    // MARK: - Body
+    
     var body: some View {
-        #if DEBUG
         Button(action: resetData) {
             Image(systemName: "trash")
                 .font(.footnote)
@@ -24,12 +31,14 @@ struct ResetDataView: View {
                         .fill(Color.red)
                 )
         }
-        #else
-        EmptyView()
-        #endif
+        .help("Reset all data to default")
+        .accessibilityLabel("Reset all data")
+        .accessibilityHint("Deletes all tasks and recreates sample data")
     }
     
-    #if DEBUG
+    // MARK: - Data Operations
+    
+    /// Resets all data by deleting all tasks and recreating sample tasks
     private func resetData() {
         // Delete all tasks
         do {
@@ -44,11 +53,11 @@ struct ResetDataView: View {
             print("Error resetting data: \(error)")
         }
     }
-    #endif
 }
+
+// MARK: - Previews
 
 #Preview {
     ResetDataView()
         .padding()
-        .previewLayout(.sizeThatFits)
 }
