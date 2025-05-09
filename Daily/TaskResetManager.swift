@@ -2,7 +2,7 @@
 //  TaskResetManager.swift
 //  Daily
 //
-//  Created by Claude on 08/05/2025.
+//  Created by Stelios Georgiou on 08/05/2025.
 //
 
 import Foundation

@@ -2,7 +2,7 @@
 //  SettingsManager.swift
 //  Daily
 //
-//  Created with Claude Code.
+//  Created by Stelios Georgiou on 08/05/2025.
 //
 
 import Foundation
