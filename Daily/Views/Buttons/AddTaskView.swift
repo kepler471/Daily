@@ -97,22 +97,21 @@ struct AddTaskView: View {
                 
                 // Time scheduling options
                 HStack {
-                    Toggle("Schedule Time", isOn: $hasScheduledTime)
-                        .labelsHidden()
-                        .accessibilityLabel("Schedule specific time")
-                    
                     Text("Time")
                         .foregroundColor(.secondary)
                         .padding(.leading, 4)
-                    
+
+                    Text("(Required)")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .padding(.leading, 2)
+
                     Spacer()
-                    
-                    if hasScheduledTime {
-                        DatePicker("Scheduled Time", selection: $scheduledTime, displayedComponents: .hourAndMinute)
-                            .labelsHidden()
-                            .fixedSize()
-                            .accessibilityLabel("Select time for task")
-                    }
+
+                    DatePicker("Scheduled Time", selection: $scheduledTime, displayedComponents: .hourAndMinute)
+                        .labelsHidden()
+                        .fixedSize()
+                        .accessibilityLabel("Select time for task (required)")
                 }
                 .padding(.vertical, 5)
                 
