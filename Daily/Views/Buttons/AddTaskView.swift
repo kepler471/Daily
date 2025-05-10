@@ -79,6 +79,12 @@ struct AddTaskView: View {
                     .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.1)))
                     .focused($isTitleFieldFocused)
                     .accessibilityIdentifier("taskTitleField")
+                    .onSubmit {
+                        if !title.isEmpty {
+                            addTask()
+                            dismiss()
+                        }
+                    }
                 
                 // Category selection
                 Picker("Task Category", selection: $selectedCategory) {
@@ -113,19 +119,24 @@ struct AddTaskView: View {
                 Spacer()
                 
                 // Add task button
-                Button("Add Task") {
-                    addTask()
-                    dismiss()
+                Button {
+                    if !title.isEmpty {
+                        addTask()
+                        dismiss()
+                    }
+                } label: {
+                    Text("Add Task")
+                        .frame(maxWidth: .infinity)
+                        .foregroundColor(.white)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(title.isEmpty ? Color.gray.opacity(0.5) : selectedCategory == .required ? Color.blue : Color.green)
+                        )
+                        .contentShape(Rectangle()) // Make entire area clickable
                 }
                 .disabled(title.isEmpty)
-                .frame(maxWidth: .infinity)
-                .foregroundColor(.white)
-                .padding(.vertical, 16)
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(title.isEmpty ? Color.gray.opacity(0.5) : selectedCategory == .required ? Color.blue : Color.green)
-                )
-                .buttonStyle(.plain)
+                .buttonStyle(.borderless) // Use borderless style for better hit testing
                 .focusable(false)
                 .accessibilityIdentifier("addTaskButton")
                 .accessibilityHint("Creates a new task with the provided details")
