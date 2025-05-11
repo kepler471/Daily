@@ -8,59 +8,70 @@
 import SwiftUI
 import SwiftData
 
-/// A button view that triggers the task creation sheet
+/// A button view that triggers the task creation overlay
 struct AddTaskButtonView: View {
     // MARK: - Properties
-    
-    /// Binding to control the presentation of the add task sheet
-    @Binding var showingAddTask: Bool
-    
+
+    /// State to control the presentation of the add task overlay
+    @State private var showingAddTask = false
+
     /// The color theme for the button (defaults to blue)
     var color: Color = .blue
-    
+
     // MARK: - Body
-    
+
     var body: some View {
-        Button {
-            showingAddTask = true
-        } label: {
-            Image(systemName: "plus")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(color)
-                .frame(width: 36, height: 36)
-                .background(
-                    Circle()
-                        .fill(color.opacity(0.15))
-                )
-                .padding(4)
+        ZStack {
+            // Add task button
+            Button {
+                showingAddTask = true
+            } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(color)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        Circle()
+                            .fill(color.opacity(0.15))
+                    )
+                    .padding(4)
+            }
+            .buttonStyle(.plain)
+            .contentShape(Circle())
+            .focusable(false)
+            .accessibilityLabel("Add new task")
+
+            // Add task overlay when active
+            if showingAddTask {
+                AddTaskView(isPresented: $showingAddTask)
+                    .transition(.opacity)
+            }
         }
-        .buttonStyle(.plain)
-        .contentShape(Circle())
-        .focusable(false)
-        .accessibilityLabel("Add new task")
+        .animation(.easeInOut(duration: 0.2), value: showingAddTask)
     }
 }
 
 /// A view that provides the user interface for creating a new task
+// TODO: Wrap up this UI into a Task Card like View
 struct AddTaskView: View {
     // MARK: - Environment and State
-    
+
     /// The model context for saving new tasks
     @Environment(\.modelContext) private var modelContext
-    
-    /// Environment value for dismissing the sheet
-    @Environment(\.dismiss) private var dismiss
-    
+
     /// The title of the new task
     @State private var title = ""
-    
+
     /// The selected category for the new task
     @State private var selectedCategory: TaskCategory = .required
-    
+
     /// Components for the custom time picker
     @State private var selectedHour = Calendar.current.component(.hour, from: Date()) % 12
     @State private var selectedMinute = Calendar.current.component(.minute, from: Date())
     @State private var isAM = Calendar.current.component(.hour, from: Date()) < 12
+
+    /// Binding to control the visibility of this view
+    @Binding var isPresented: Bool
 
     /// The scheduled time for the task calculated from picker components
     private var scheduledTime: Date {
@@ -81,14 +92,27 @@ struct AddTaskView: View {
     // MARK: - Body
     
     var body: some View {
-        NavigationStack {
+        ZStack {
+            // MARK: Background
+
+            // Translucent blurred background overlay
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .opacity(0.85)
+                .ignoresSafeArea()
+
+            // MARK: Content
+
             VStack(spacing: 16) {
-                // Add top spacing to avoid X button overlap
-                Spacer()
-                    .frame(height: 32)
-                
+                // Title section
+                Text("New Task")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 20)
+
                 // MARK: - Task title
-                
+
                 TextField("Task name", text: $title)
                     .font(.system(size: 18, weight: .medium))
                     .padding(.horizontal, 12)
@@ -99,10 +123,10 @@ struct AddTaskView: View {
                     .onSubmit {
                         if !title.isEmpty {
                             addTask()
-                            dismiss()
+                            isPresented = false
                         }
                     }
-                
+
                 // MARK: - Category selection
                 Picker("", selection: $selectedCategory) {
                     Text("Required").tag(TaskCategory.required)
@@ -113,7 +137,7 @@ struct AddTaskView: View {
                 .padding(.vertical, 5)
                 .accessibilityIdentifier("categoryPicker")
                 .accessibilityLabel("Task Category")
-                
+
                 // MARK: - Custom time picker
 
                 // Time selection components
@@ -159,11 +183,13 @@ struct AddTaskView: View {
                 .padding(.vertical, 6)
                 .frame(maxWidth: .infinity)
                 .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.1)))
-                
+
+                Spacer()
+
                 // Add task button - only enabled if both title and time are set
                 Button {
                     addTask()
-                    dismiss()
+                    isPresented = false
                 } label: {
                     Text("Add Task")
                         .frame(maxWidth: .infinity)
@@ -181,40 +207,31 @@ struct AddTaskView: View {
                 .accessibilityIdentifier("addTaskButton")
                 .accessibilityHint("Creates a new task with the provided details and scheduled time")
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-//            .navigationBarHidden(true)
-            .defaultFocus($isTitleFieldFocused, true)
-            .overlay(
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.secondary)
-                        .frame(width: 28, height: 28)
-                        .background(
-                            Circle()
-                                .fill(Color.gray.opacity(0.15))
-                        )
-                }
-                .buttonStyle(.plain)
-                .contentShape(Circle())
-                .accessibilityLabel("Close")
-                .accessibilityIdentifier("closeButton")
-                .padding([.top, .leading], 16),
-                alignment: .topLeading
-            )
+            .padding(.horizontal, 40)
+            .padding(.vertical, 40)
+            .frame(maxWidth: 600)
         }
-        .presentationDetents([.height(550)])
         .onAppear {
-            // Auto-focus the title field when the sheet appears
+            // Auto-focus the title field when the view appears
             isTitleFieldFocused = true
         }
+        .withCloseButton(
+            action: { isPresented = false },
+            size: 36,
+            iconSize: 18
+        )
     }
     
     // MARK: - Helper Methods
     
+    // MARK: - Initialization
+
+    /// Creates a new add task view
+    /// - Parameter isPresented: Binding to control the visibility of the view
+    init(isPresented: Binding<Bool>) {
+        self._isPresented = isPresented
+    }
+
     /// Creates and saves a new task with the current input values
     private func addTask() {
         withAnimation {
@@ -253,10 +270,10 @@ struct AddTaskView: View {
 // MARK: - Previews
 
 #Preview("Add Task Button") {
-    AddTaskButtonView(showingAddTask: .constant(false))
+    AddTaskButtonView()
         .padding()
 }
 
 #Preview("Add Task View") {
-    AddTaskView()
+    AddTaskView(isPresented: .constant(true))
 }

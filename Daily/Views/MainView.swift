@@ -208,9 +208,18 @@ struct MainView: View {
             }
         }
         // MARK: View Modifiers
-        .sheet(isPresented: $showingAddTask) {
-            AddTaskView()
-        }
+
+        // Add Task Overlay
+        .overlay(
+            Group {
+                if showingAddTask {
+                    AddTaskView(isPresented: $showingAddTask)
+                        .transition(.opacity)
+                        .zIndex(100)
+                }
+            }
+        )
+        .animation(.easeInOut(duration: 0.3), value: showingAddTask)
         .animation(.easeInOut(duration: 0.3), value: showingRequiredCompletedTasks)
         .animation(.easeInOut(duration: 0.3), value: showingSuggestedCompletedTasks)
         .animation(.easeInOut(duration: 0.3), value: showingFocusedTask)
