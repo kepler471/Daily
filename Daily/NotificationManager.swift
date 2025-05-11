@@ -154,6 +154,10 @@ class NotificationManager: NSObject, ObservableObject {
     /// - Parameters:
     ///   - task: The task to schedule a notification for
     ///   - settings: The settings manager to check notification preferences
+    ///
+    /// The notification will repeat daily at the specified time using a calendar trigger
+    /// with hour and minute components, ensuring notifications continue even if the app
+    /// is not running at reset time.
     @MainActor
     func scheduleNotification(for task: Daily.Task, settings: SettingsManager) async {
         // First ensure we have notification permission
@@ -186,10 +190,8 @@ class NotificationManager: NSObject, ObservableObject {
             return
         }
 
-        // Don't schedule if the scheduled time is in the past
-        if scheduledTime < Date() {
-            return
-        }
+        // With repeating notifications that only specify hour and minute,
+        // the system will automatically schedule for the next occurrence of that time
 
         // Create notification content
         let content = UNMutableNotificationContent()
@@ -203,14 +205,15 @@ class NotificationManager: NSObject, ObservableObject {
         content.userInfo = ["taskId": taskID]
 
         // Create date components trigger for the scheduled time
+        // Only use hour and minute for repeating daily notifications
         let triggerComponents = Calendar.current.dateComponents(
-            [.year, .month, .day, .hour, .minute],
+            [.hour, .minute],
             from: scheduledTime
         )
 
         let trigger = UNCalendarNotificationTrigger(
             dateMatching: triggerComponents,
-            repeats: false
+            repeats: true
         )
 
         // Create the notification request
