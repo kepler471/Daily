@@ -156,17 +156,17 @@ struct FocusedTaskView: View {
             .padding(.bottom, 20)
             
             // MARK: Category Badge
-            
-            Text("Required")
+
+            Text(task.category == .required ? "Required" : "Suggested")
                 .font(.subheadline)
                 .fontWeight(.medium)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .background(
                     Capsule()
-                        .fill(Color.blue.opacity(0.2))
+                        .fill(task.category == .required ? Color.blue.opacity(0.2) : Color.purple.opacity(0.2))
                 )
-                .foregroundColor(.blue)
+                .foregroundColor(task.category == .required ? .blue : .purple)
             
             // MARK: Action Buttons
 
