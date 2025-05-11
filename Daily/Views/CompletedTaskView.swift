@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 // MARK: - Completed Task View
 
@@ -21,6 +22,9 @@ struct CompletedTaskView: View {
     
     /// Database context for saving task changes
     @Environment(\.modelContext) private var modelContext
+
+    /// Reference to the notification manager
+    @EnvironmentObject private var notificationManager: NotificationManager
     
     /// Live query for completed tasks, sorted by order
     @Query private var completedTasks: [Task]
@@ -229,7 +233,12 @@ struct CompletedTaskView: View {
         do {
             // Save the changes to the model
             try modelContext.save()
-            
+
+            // Handle notification updates when task is uncompleted
+            if !task.isCompleted {
+                notificationManager.refreshNotifications()
+            }
+
             // Add a small delay to allow the UI to update
             // This helps the SwiftData change notifications propagate
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -250,4 +259,5 @@ struct CompletedTaskView: View {
 #Preview("Completed Tasks") {
     CompletedTaskView(isPresented: .constant(true))
         .modelContainer(TaskMockData.createPreviewContainer())
+        .environmentObject(NotificationManager.shared)
 }

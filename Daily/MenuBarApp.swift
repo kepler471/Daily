@@ -96,7 +96,28 @@ class MenuBarManager: NSObject {
     /// Handle request to show the popover from other components
     @objc private func handleShowPopover() {
         if let button = statusItem?.button, let popover = self.popover, !popover.isShown {
+            // Ensure popover is properly sized when shown
+            ensurePopoverSize(popover)
+
+            // Show the popover with the correct size
             showPopover(button)
+        }
+    }
+
+    /// Ensures the popover has the correct size before showing
+    private func ensurePopoverSize(_ popover: NSPopover) {
+        // Reset the correct size
+        popover.contentSize = NSSize(width: 800, height: 600)
+
+        // Update the view controller's preferred size
+        if let popoverVC = popover.contentViewController {
+            popoverVC.preferredContentSize = NSSize(width: 800, height: 600)
+
+            // Force the view to update its size
+            let view = popoverVC.view
+            view.setFrameSize(NSSize(width: 800, height: 600))
+            view.needsLayout = true
+            view.layoutSubtreeIfNeeded()
         }
     }
     
@@ -155,9 +176,21 @@ class MenuBarManager: NSObject {
     /// - Parameter sender: The status bar button to anchor the popover to
     private func showPopover(_ sender: NSStatusBarButton) {
         guard let popover = self.popover, let statusBarButton = statusItem?.button else { return }
-        
+
+        // Ensure proper size before showing
+        ensurePopoverSize(popover)
+
         // Position the popover below the status item
         popover.show(relativeTo: statusBarButton.bounds, of: statusBarButton, preferredEdge: .minY)
+
+        // Additional size enforcement after showing
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            // Re-apply size after popover is visible
+            if let vc = popover.contentViewController {
+                vc.preferredContentSize = NSSize(width: 800, height: 600)
+                popover.contentSize = NSSize(width: 800, height: 600)
+            }
+        }
     }
     
     /// Close the popover if it's open

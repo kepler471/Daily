@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftData
+import UserNotifications
 
 // MARK: - Mock Data Provider
 
@@ -74,6 +75,12 @@ struct TaskMockData {
         
         // Save the changes
         try context.save()
+
+        // Schedule notifications for tasks with scheduled times
+        let tasksWithScheduledTimes = [breakfast, email]
+        for task in tasksWithScheduledTimes {
+            NotificationManager.shared.scheduleTaskNotification(task)
+        }
     }
     
     // MARK: - Preview Container

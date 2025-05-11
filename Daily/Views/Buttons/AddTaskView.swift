@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 /// A button view that triggers the task creation overlay
 struct AddTaskButtonView: View {
@@ -242,6 +243,9 @@ struct AddTaskView: View {
                 scheduledTime: scheduledTime
             )
             modelContext.insert(newTask)
+
+            // Schedule notification for the new task
+            NotificationManager.shared.scheduleTaskNotification(newTask)
         }
     }
     

@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 // MARK: - Main View
 
@@ -41,6 +42,9 @@ struct MainView: View {
 
     /// Access to the task reset functionality
     @EnvironmentObject private var resetTaskManager: TaskResetManager
+
+    /// Access to the notification manager
+    @EnvironmentObject private var notificationManager: NotificationManager
 
     /// Query for checking if there are any required tasks
     @Query(filter: Task.Predicates.byCategoryAndCompletion(category: .required, isCompleted: false),

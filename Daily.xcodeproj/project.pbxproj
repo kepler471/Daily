@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		653C70752DD0D605002D5317 /* Notifications.md in Resources */ = {isa = PBXBuildFile; fileRef = 653C70742DD0D5FE002D5317 /* Notifications.md */; };
+		65724E482DCDAADC002FCB61 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 65724E472DCDAADC002FCB61 /* README.md */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		657284AF2DC91D20009E9343 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -24,6 +29,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		653C70742DD0D5FE002D5317 /* Notifications.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = Notifications.md; sourceTree = "<group>"; };
+		65724E472DCDAADC002FCB61 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		6572849B2DC91D1F009E9343 /* Daily.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Daily.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		657284AE2DC91D20009E9343 /* DailyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DailyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		657284B82DC91D20009E9343 /* DailyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DailyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -75,6 +82,8 @@
 		657284922DC91D1F009E9343 = {
 			isa = PBXGroup;
 			children = (
+				653C70742DD0D5FE002D5317 /* Notifications.md */,
+				65724E472DCDAADC002FCB61 /* README.md */,
 				6572849D2DC91D1F009E9343 /* Daily */,
 				657284B12DC91D20009E9343 /* DailyTests */,
 				657284BB2DC91D20009E9343 /* DailyUITests */,
@@ -212,6 +221,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				653C70752DD0D605002D5317 /* Notifications.md in Resources */,
+				65724E482DCDAADC002FCB61 /* README.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

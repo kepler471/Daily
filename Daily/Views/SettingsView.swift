@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UserNotifications
 
 /// A view that provides user interface for configuring app settings
 ///
@@ -18,6 +19,9 @@ struct SettingsView: View {
     
     /// Reference to the settings manager for persistent storage
     @EnvironmentObject private var settingsManager: SettingsManager
+
+    /// Reference to the notification manager
+    @EnvironmentObject private var notificationManager: NotificationManager
     
     /// Controls visibility of the explanation popover for launch at login
     @State private var showingLaunchExplanation = false
@@ -74,7 +78,7 @@ struct SettingsView: View {
             }
             
             // MARK: Task Reset Settings
-            
+
             Section(header: Text("Task Reset")) {
                 HStack {
                     Text("Reset tasks daily at:")
@@ -94,6 +98,51 @@ struct SettingsView: View {
                 Text("Tasks will reset automatically at the specified time each day.")
                     .font(.caption)
                     .foregroundColor(.secondary)
+            }
+
+            // MARK: Notification Settings
+
+            Section(header: Text("Notifications")) {
+                HStack {
+                    Text("Notification status: ")
+                    Text(notificationManager.notificationsEnabled ? "Enabled" : "Disabled")
+                        .foregroundColor(notificationManager.notificationsEnabled ? .green : .red)
+                        .fontWeight(.bold)
+
+                    Spacer()
+
+                    Button("Open System Settings") {
+                        openNotificationSettings()
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundColor(.blue)
+                }
+                .padding(.vertical, 4)
+                .help("Notification permissions are managed in System Settings")
+
+                if notificationManager.notificationsEnabled {
+                    Divider()
+
+                    DatePicker(
+                        "Default reminder time:",
+                        selection: $settingsManager.reminderTime,
+                        displayedComponents: .hourAndMinute
+                    )
+
+                    Toggle("Notify for required tasks", isOn: $settingsManager.notifyForRequiredTasks)
+                    Toggle("Notify for suggested tasks", isOn: $settingsManager.notifyForSuggestedTasks)
+
+                    Button("Test Notification") {
+                        sendTestNotification()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                } else {
+                    Text("To receive task reminders, enable notifications in System Settings.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
             
             // MARK: Reset to Defaults
@@ -152,6 +201,38 @@ struct SettingsView: View {
         let amPm = hour < 12 ? "AM" : "PM"
         return "\(hourIn12Format):00 \(amPm)"
     }
+
+    /// Send a test notification to verify settings
+    private func sendTestNotification() {
+        let content = UNMutableNotificationContent()
+        content.title = "Test Notification"
+        content.body = "Your notification settings are working!"
+        content.sound = UNNotificationSound.default
+
+        // Trigger the notification 2 seconds from now
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 2, repeats: false)
+
+        // Create the request
+        let request = UNNotificationRequest(
+            identifier: "test-notification",
+            content: content,
+            trigger: trigger
+        )
+
+        // Add the request to the notification center
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Error sending test notification: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Open system notification settings
+    private func openNotificationSettings() {
+        if let settingsURL = URL(string: "x-apple.systempreferences:com.apple.preference.notifications") {
+            NSWorkspace.shared.open(settingsURL)
+        }
+    }
 }
 
 // MARK: - Previews
@@ -159,4 +240,5 @@ struct SettingsView: View {
 #Preview {
     SettingsView()
         .environmentObject(SettingsManager())
+        .environmentObject(NotificationManager.shared)
 }

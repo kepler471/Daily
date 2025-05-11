@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 // MARK: - TaskStackView
 
@@ -19,9 +20,12 @@ import SwiftData
 /// - Support for multiple layout styles through different initialization options
 struct TaskStackView: View {
     // MARK: - Properties
-    
+
     /// Database context for saving task changes
     @Environment(\.modelContext) private var modelContext
+
+    /// Reference to the notification manager
+    @EnvironmentObject private var notificationManager: NotificationManager
     
     /// Query for retrieving tasks from the database
     @Query private var tasks: [Task]
@@ -248,10 +252,18 @@ struct TaskStackView: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         // Now update the model
                         task.isCompleted = newCompletionState
-                        
+
                         // Try to save the changes
                         do {
                             try modelContext.save()
+
+                            // Notify the notification manager about the completed task
+                            if newCompletionState {
+                                notificationManager.handleTaskCompletion(task)
+                            } else {
+                                // If task is uncompleted, refresh notifications
+                                notificationManager.refreshNotifications()
+                            }
                         } catch {
                             print("Error saving task completion state: \(error.localizedDescription)")
                         }
@@ -270,6 +282,11 @@ struct TaskStackView: View {
                 // Try to save the changes
                 do {
                     try modelContext.save()
+
+                    // Update notifications when task is reopened
+                    if !newCompletionState {
+                        notificationManager.refreshNotifications()
+                    }
                 } catch {
                     print("Error saving task completion state: \(error.localizedDescription)")
                 }
@@ -477,6 +494,7 @@ struct TaskStackView: View {
             .frame(height: 600)
             .padding()
             .modelContainer(TaskMockData.createPreviewContainer())
+            .environmentObject(NotificationManager.shared)
             .tabItem {
                 Label("Required", systemImage: "checklist")
             }
@@ -505,6 +523,7 @@ struct TaskStackView: View {
         .frame(height: 600)
         .padding()
         .modelContainer(TaskMockData.createPreviewContainer())
+        .environmentObject(NotificationManager.shared)
 }
 
 #Preview("With Scale") {
@@ -512,6 +531,7 @@ struct TaskStackView: View {
         .frame(height: 600)
         .padding()
         .modelContainer(TaskMockData.createPreviewContainer())
+        .environmentObject(NotificationManager.shared)
 }
 
 #Preview("Log with Scale") {
@@ -528,6 +548,7 @@ struct TaskStackView: View {
     .frame(height: 600)
     .padding()
     .modelContainer(TaskMockData.createPreviewContainer())
+    .environmentObject(NotificationManager.shared)
 }
 
 #Preview("Hover Effects") {
@@ -535,12 +556,12 @@ struct TaskStackView: View {
         Text("Hover over any card to fan out the stack")
             .font(.headline)
             .padding(.bottom)
-        
+
         Text("Cards fan out non-linearly from the hovered card")
             .font(.subheadline)
             .foregroundColor(.secondary)
             .padding(.bottom)
-        
+
         TaskStackView(
             category: .required,
             offsetByIndex: { i in
@@ -552,11 +573,13 @@ struct TaskStackView: View {
     }
     .padding()
     .modelContainer(TaskMockData.createPreviewContainer())
+    .environmentObject(NotificationManager.shared)
 }
 
 #Preview("Interactive") {
     TaskStackAdjustablePreview()
         .modelContainer(TaskMockData.createPreviewContainer())
+        .environmentObject(NotificationManager.shared)
 }
 
 /// An interactive preview wrapper for TaskStackView that allows real-time adjustment with sliders
