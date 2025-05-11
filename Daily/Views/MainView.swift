@@ -12,11 +12,11 @@ import SwiftData
 
 /// The primary interface view for the Daily app
 ///
-/// MainView serves as the main content view displayed in the popover when the
-/// user clicks on the menu bar icon. It manages:
+/// MainView serves as the main content view displayed in the application window.
+/// It manages:
 /// - Two columns of tasks (Required and Suggested)
 /// - Displaying task completion status
-/// - Coordination with the menu bar via notifications
+/// - Handling app notifications
 /// - Navigation to sheets and overlays for task management
 struct MainView: View {
     // MARK: Environment & State

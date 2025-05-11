@@ -127,4 +127,4 @@ struct KeyboardShortcut {
 
 // MARK: - Notification Extension
 
-// Note: Other notification names are defined in MenuBarApp.swift
+// Note: Other notification names are defined in AppMenu.swift

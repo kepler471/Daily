@@ -16,7 +16,7 @@ import AppKit
 /// DailyApp sets up the core infrastructure including:
 /// - Model container for data persistence using SwiftData
 /// - State management through TaskResetManager and SettingsManager
-/// - Menu bar behavior through AppDelegate and MenuBarManager
+/// - Application behavior through AppDelegate and AppMenuManager
 /// - Application scenes and window behavior
 @main
 struct DailyApp: App {
@@ -93,9 +93,9 @@ struct DailyApp: App {
     // MARK: - Lifecycle
     
     /// Configure dependencies when the app appears
-    /// 
+    ///
     /// This method passes the required dependencies to the AppDelegate
-    /// and sets up the popover with the correct context
+    /// and sets up the application context
     func onAppear() {
         // Pass the dependencies to the app delegate
         appDelegate.modelContainer = sharedModelContainer
@@ -116,19 +116,14 @@ struct DailyApp: App {
                 .environmentObject(taskResetManager) // Make available throughout the app
                 .environmentObject(settingsManager) // Make settings available throughout the app
                 .environment(\.resetTaskManager, taskResetManager) // Provide via environment key
-                // Hide the window at startup and let the menu bar handle it
-                .hidden()
                 .onAppear {
                     onAppear()
                 }
         }
         .modelContainer(sharedModelContainer)
-        // Disable the default window title bar and hide the window by default
-        .windowStyle(.hiddenTitleBar)
-        .commands {
-            // Remove the default window menu 
-            CommandGroup(replacing: .newItem) { }
-        }
+        .windowResizability(.contentSize)
+        .defaultSize(width: 800, height: 600)
+        .windowStyle(.titleBar)
         
         // MARK: Settings Scene
         
