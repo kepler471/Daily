@@ -1,4 +1,4 @@
-// 
+//
 //  Task+Extensions.swift
 //  Daily
 //
@@ -17,7 +17,7 @@ extension Task {
     /// in various ways, making database queries more consistent and maintainable.
     enum Predicates {
         // MARK: Category Filters
-        
+
         /// Creates a predicate to filter tasks by category, or all categories if nil
         /// - Parameter category: The category to filter by, or nil for all categories
         /// - Returns: A predicate that can be used with SwiftData fetch descriptors
@@ -31,9 +31,9 @@ extension Task {
                 return #Predicate<Task> { _ in true }
             }
         }
-        
+
         // MARK: Completion Filters
-        
+
         /// Creates a predicate to filter tasks by completion status
         /// - Parameter isCompleted: Whether to find completed or incomplete tasks
         /// - Returns: A predicate that can be used with SwiftData fetch descriptors
@@ -42,7 +42,7 @@ extension Task {
                 task.isCompleted == isCompleted
             }
         }
-        
+
         /// Creates a predicate for tasks in a category with specific completion status
         /// - Parameters:
         ///   - category: The category to filter by
@@ -53,9 +53,9 @@ extension Task {
                 task.categoryRaw == category.rawValue && task.isCompleted == isCompleted
             }
         }
-        
+
         // MARK: Schedule Filters
-        
+
         /// Creates a predicate for tasks that have a scheduled time
         /// - Returns: A predicate that can be used with SwiftData fetch descriptors
         static func withScheduledTime() -> Predicate<Task> {
@@ -70,8 +70,24 @@ extension Task {
 
 /// Extension to provide convenience methods for fetching and counting tasks
 extension ModelContext {
-    // MARK: Fetch Methods
-    
+    // MARK: - Helper Methods
+
+    /// Create a fetch descriptor with a predicate and sort descriptors
+    /// - Parameters:
+    ///   - predicate: The predicate to filter tasks
+    ///   - sortBy: Sort descriptors to order the results (defaults to task order)
+    /// - Returns: A configured FetchDescriptor
+    private func createTaskDescriptor(
+        predicate: Predicate<Task>,
+        sortBy: [SortDescriptor<Task>] = []
+    ) -> FetchDescriptor<Task> {
+        var descriptor = FetchDescriptor<Task>(predicate: predicate)
+        descriptor.sortBy = sortBy.isEmpty ? [SortDescriptor(\Task.order)] : sortBy
+        return descriptor
+    }
+
+    // MARK: - Fetch Methods
+
     /// Fetches all tasks for a specific category or all categories if nil
     /// - Parameters:
     ///   - category: Optional category to filter by
@@ -79,11 +95,31 @@ extension ModelContext {
     /// - Returns: Array of matching Task objects
     /// - Throws: Error if the fetch operation fails
     func fetchTasks(category: TaskCategory? = nil, sortBy: [SortDescriptor<Task>] = []) throws -> [Task] {
-        var descriptor = FetchDescriptor<Task>(predicate: Task.Predicates.byCategory(category))
-        descriptor.sortBy = sortBy.isEmpty ? [SortDescriptor(\Task.order)] : sortBy
+        let predicate = Task.Predicates.byCategory(category)
+        let descriptor = createTaskDescriptor(predicate: predicate, sortBy: sortBy)
         return try fetch(descriptor)
     }
-    
+
+    /// Fetches tasks with specified completion status for a category or all categories
+    /// - Parameters:
+    ///   - isCompleted: The completion status to filter by
+    ///   - category: Optional category to filter by
+    ///   - sortBy: Sort descriptors to order the results (defaults to task order)
+    /// - Returns: Array of matching Task objects
+    /// - Throws: Error if the fetch operation fails
+    func fetchTasks(
+        isCompleted: Bool,
+        category: TaskCategory? = nil,
+        sortBy: [SortDescriptor<Task>] = []
+    ) throws -> [Task] {
+        let predicate = category != nil
+            ? Task.Predicates.byCategoryAndCompletion(category: category!, isCompleted: isCompleted)
+            : Task.Predicates.byCompletion(isCompleted: isCompleted)
+
+        let descriptor = createTaskDescriptor(predicate: predicate, sortBy: sortBy)
+        return try fetch(descriptor)
+    }
+
     /// Fetches incomplete tasks for a specific category or all categories if nil
     /// - Parameters:
     ///   - category: Optional category to filter by
@@ -91,17 +127,9 @@ extension ModelContext {
     /// - Returns: Array of matching incomplete Task objects
     /// - Throws: Error if the fetch operation fails
     func fetchIncompleteTasks(category: TaskCategory? = nil, sortBy: [SortDescriptor<Task>] = []) throws -> [Task] {
-        if let category = category {
-            var descriptor = FetchDescriptor<Task>(predicate: Task.Predicates.byCategoryAndCompletion(category: category, isCompleted: false))
-            descriptor.sortBy = sortBy.isEmpty ? [SortDescriptor(\Task.order)] : sortBy
-            return try fetch(descriptor)
-        } else {
-            var descriptor = FetchDescriptor<Task>(predicate: Task.Predicates.byCompletion(isCompleted: false))
-            descriptor.sortBy = sortBy.isEmpty ? [SortDescriptor(\Task.order)] : sortBy
-            return try fetch(descriptor)
-        }
+        return try fetchTasks(isCompleted: false, category: category, sortBy: sortBy)
     }
-    
+
     /// Fetches completed tasks for a specific category or all categories if nil
     /// - Parameters:
     ///   - category: Optional category to filter by
@@ -109,53 +137,56 @@ extension ModelContext {
     /// - Returns: Array of matching completed Task objects
     /// - Throws: Error if the fetch operation fails
     func fetchCompletedTasks(category: TaskCategory? = nil, sortBy: [SortDescriptor<Task>] = []) throws -> [Task] {
-        if let category = category {
-            var descriptor = FetchDescriptor<Task>(predicate: Task.Predicates.byCategoryAndCompletion(category: category, isCompleted: true))
-            descriptor.sortBy = sortBy.isEmpty ? [SortDescriptor(\Task.order)] : sortBy
-            return try fetch(descriptor)
-        } else {
-            var descriptor = FetchDescriptor<Task>(predicate: Task.Predicates.byCompletion(isCompleted: true))
-            descriptor.sortBy = sortBy.isEmpty ? [SortDescriptor(\Task.order)] : sortBy
-            return try fetch(descriptor)
-        }
+        return try fetchTasks(isCompleted: true, category: category, sortBy: sortBy)
     }
-    
-    // MARK: Count Methods
-    
+
+    // MARK: - Count Methods
+
+    /// Counts tasks with the given predicate
+    /// - Parameter predicate: The predicate to filter tasks
+    /// - Returns: The number of matching tasks
+    /// - Throws: Error if the count operation fails
+    private func countTasksWithPredicate(_ predicate: Predicate<Task>) throws -> Int {
+        let descriptor = FetchDescriptor<Task>(predicate: predicate)
+        return try fetchCount(descriptor)
+    }
+
     /// Counts all tasks in a specific category or all categories if nil
     /// - Parameter category: Optional category to filter by
     /// - Returns: The number of matching tasks
     /// - Throws: Error if the count operation fails
     func countTasks(category: TaskCategory? = nil) throws -> Int {
-        let descriptor = FetchDescriptor<Task>(predicate: Task.Predicates.byCategory(category))
-        return try fetchCount(descriptor)
+        let predicate = Task.Predicates.byCategory(category)
+        return try countTasksWithPredicate(predicate)
     }
-    
+
+    /// Counts tasks with specified completion status for a category or all categories
+    /// - Parameters:
+    ///   - isCompleted: The completion status to filter by
+    ///   - category: Optional category to filter by
+    /// - Returns: The number of matching tasks
+    /// - Throws: Error if the count operation fails
+    func countTasks(isCompleted: Bool, category: TaskCategory? = nil) throws -> Int {
+        let predicate = category != nil
+            ? Task.Predicates.byCategoryAndCompletion(category: category!, isCompleted: isCompleted)
+            : Task.Predicates.byCompletion(isCompleted: isCompleted)
+
+        return try countTasksWithPredicate(predicate)
+    }
+
     /// Counts incomplete tasks in a specific category or all categories if nil
     /// - Parameter category: Optional category to filter by
     /// - Returns: The number of matching incomplete tasks
     /// - Throws: Error if the count operation fails
     func countIncompleteTasks(category: TaskCategory? = nil) throws -> Int {
-        if let category = category {
-            let descriptor = FetchDescriptor<Task>(predicate: Task.Predicates.byCategoryAndCompletion(category: category, isCompleted: false))
-            return try fetchCount(descriptor)
-        } else {
-            let descriptor = FetchDescriptor<Task>(predicate: Task.Predicates.byCompletion(isCompleted: false))
-            return try fetchCount(descriptor)
-        }
+        return try countTasks(isCompleted: false, category: category)
     }
-    
+
     /// Counts completed tasks in a specific category or all categories if nil
     /// - Parameter category: Optional category to filter by
     /// - Returns: The number of matching completed tasks
     /// - Throws: Error if the count operation fails
     func countCompletedTasks(category: TaskCategory? = nil) throws -> Int {
-        if let category = category {
-            let descriptor = FetchDescriptor<Task>(predicate: Task.Predicates.byCategoryAndCompletion(category: category, isCompleted: true))
-            return try fetchCount(descriptor)
-        } else {
-            let descriptor = FetchDescriptor<Task>(predicate: Task.Predicates.byCompletion(isCompleted: true))
-            return try fetchCount(descriptor)
-        }
+        return try countTasks(isCompleted: true, category: category)
     }
 }
