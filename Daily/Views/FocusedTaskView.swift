@@ -73,11 +73,15 @@ struct FocusedTaskView: View {
         ZStack {
             // MARK: Background
 
-            // Translucent blurred background overlay
+            // Translucent blurred background overlay that can be tapped to dismiss
             Rectangle()
                 .fill(.ultraThinMaterial)
                 .opacity(0.85)
                 .ignoresSafeArea()
+                .onTapGesture {
+                    // Close the view when tapping on the background
+                    isPresented = false
+                }
 
             // MARK: Content
 
@@ -213,6 +217,8 @@ struct FocusedTaskView: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+        .contentShape(Rectangle())
+        .allowsHitTesting(true) // Ensure taps on the card don't pass through
     }
     
     // MARK: - Actions
