@@ -7,6 +7,8 @@
 
 import Foundation
 import SwiftData
+import UserNotifications
+import SwiftUI
 
 // MARK: - Enums
 
@@ -84,5 +86,20 @@ final class Task {
         self.scheduledTime = nil
         self.isCompleted = false
         self.createdAt = Date()
+    }
+
+    // MARK: - Notification Scheduling
+
+    /// Schedule a notification for this task
+    /// - Parameter settings: The settings manager to check notification preferences
+    @MainActor
+    func scheduleNotification(settings: SettingsManager) async {
+        await NotificationManager.shared.scheduleNotification(for: self, settings: settings)
+    }
+
+    /// Cancel any notification for this task
+    @MainActor
+    func cancelNotification() async {
+        await NotificationManager.shared.cancelNotification(for: self)
     }
 }

@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 // MARK: - Task Card View
 
@@ -19,10 +20,13 @@ import SwiftData
 /// - Creating a visually attractive card with appropriate styling based on task properties
 struct TaskCardView: View {
     // MARK: Properties
-    
+
     /// The task to display, using @Bindable for two-way binding
     @Bindable var task: Task
-    
+
+    /// Settings manager for notification preferences
+    @EnvironmentObject private var settingsManager: SettingsManager
+
     /// Callback that's invoked when the completion status is toggled
     var onToggleComplete: () -> Void
     
@@ -159,8 +163,9 @@ struct TaskCardView: View {
         scheduledTime: Calendar.current.date(bySettingHour: 7, minute: 30, second: 0, of: Date())
     )
     context.insert(task)
-    
+
     return TaskCardView(task: task, onToggleComplete: {})
         .frame(width: 350)
         .padding()
+        .environmentObject(SettingsManager())
 }

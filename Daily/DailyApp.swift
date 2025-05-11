@@ -131,6 +131,7 @@ struct DailyApp: App {
         Settings {
             SettingsView()
                 .environmentObject(settingsManager)
+                .modelContainer(sharedModelContainer)
         }
     }
 }

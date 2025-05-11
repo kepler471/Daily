@@ -6,27 +6,35 @@
 //
 
 import SwiftUI
+import UserNotifications
 
 /// A view that provides user interface for configuring app settings
 ///
 /// SettingsView manages configuration options for the application, including:
 /// - Launch at login behavior
-/// - Task reset scheduling  
+/// - Task reset scheduling
+/// - Notification preferences
 /// - Options to restore default settings
 struct SettingsView: View {
     // MARK: - Properties
-    
+
     /// Reference to the settings manager for persistent storage
     @EnvironmentObject private var settingsManager: SettingsManager
-    
+
+    /// Reference to the notification manager for notification handling
+    private let notificationManager = NotificationManager.shared
+
     /// Controls visibility of the explanation popover for launch at login
     @State private var showingLaunchExplanation = false
-    
+
     /// Controls visibility of the confirmation dialog for restoring defaults
     @State private var showingRestoreConfirmation = false
-    
+
     /// Controls visibility of the login items system settings instructions
     @State private var showingLoginItemsInstructions = false
+
+    /// Controls visibility of the notification explanation popover
+    @State private var showingNotificationExplanation = false
     
     // MARK: - Body
     
@@ -74,13 +82,13 @@ struct SettingsView: View {
             }
             
             // MARK: Task Reset Settings
-            
+
             Section(header: Text("Task Reset")) {
                 HStack {
                     Text("Reset tasks daily at:")
-                    
+
                     Spacer()
-                    
+
                     Picker("Reset Hour", selection: $settingsManager.resetHour) {
                         ForEach(0..<24) { hour in
                             Text(formatHour(hour)).tag(hour)
@@ -90,10 +98,98 @@ struct SettingsView: View {
                     .frame(width: 100)
                     .accessibilityIdentifier("resetHourPicker")
                 }
-                
+
                 Text("Tasks will reset automatically at the specified time each day.")
                     .font(.caption)
                     .foregroundColor(.secondary)
+            }
+
+            // MARK: Notification Settings
+
+            Section(header: Text("Notifications")) {
+                HStack {
+                    Toggle("Required Tasks", isOn: $settingsManager.requiredTaskNotificationsEnabled)
+                        .toggleStyle(.switch)
+                        .accessibilityIdentifier("requiredTaskNotificationsToggle")
+
+                    Spacer()
+
+                    Button(action: {
+                        showingNotificationExplanation = true
+                    }) {
+                        Image(systemName: "questionmark.circle")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Notifications help")
+                    .popover(isPresented: $showingNotificationExplanation, arrowEdge: .top) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Task Notifications")
+                                .font(.headline)
+
+                            Text("Daily can remind you about your tasks at their scheduled times. Enable notifications for the tasks you want to be reminded about.")
+                                .font(.body)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            Spacer()
+
+                            Button("OK") {
+                                showingNotificationExplanation = false
+                            }
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                        }
+                        .padding()
+                        .frame(width: 300, height: 150)
+                    }
+                }
+
+                Toggle("Suggested Tasks", isOn: $settingsManager.suggestedTaskNotificationsEnabled)
+                    .toggleStyle(.switch)
+                    .accessibilityIdentifier("suggestedTaskNotificationsToggle")
+
+                HStack {
+                    Spacer()
+
+                    Button("Test Notification") {
+                        sendTestNotification()
+                    }
+                    .buttonStyle(.borderless)
+                    .controlSize(.small)
+                    .accessibilityIdentifier("testNotificationButton")
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    switch notificationManager.authorizationStatus {
+                    case .authorized:
+                        Text("Notifications are enabled")
+                            .font(.caption)
+                            .foregroundColor(.green)
+                    case .denied:
+                        Text("Notifications are disabled in System Settings")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    case .notDetermined:
+                        Text("Notification permission not requested")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                    case .provisional, .ephemeral:
+                        Text("Provisional notification access granted")
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                    @unknown default:
+                        Text("Unknown notification status")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    if notificationManager.isDenied {
+                        Button("Open Notification Settings") {
+                            notificationManager.openNotificationSettings()
+                        }
+                        .font(.caption)
+                        .padding(.top, 2)
+                    }
+                }
             }
             
             // MARK: Reset to Defaults
@@ -121,7 +217,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 400, height: 300)
+        .frame(width: 400, height: 400)
         .onAppear {
             // Set up notification observer for login items instructions
             NotificationCenter.default.addObserver(forName: .showLoginItemInstructions,
@@ -143,7 +239,7 @@ struct SettingsView: View {
     }
     
     // MARK: - Helper Methods
-    
+
     /// Format hour for display in 12-hour format
     /// - Parameter hour: The hour in 24-hour format (0-23)
     /// - Returns: A formatted string in 12-hour format with AM/PM indicator
@@ -151,6 +247,34 @@ struct SettingsView: View {
         let hourIn12Format = hour % 12 == 0 ? 12 : hour % 12
         let amPm = hour < 12 ? "AM" : "PM"
         return "\(hourIn12Format):00 \(amPm)"
+    }
+
+    /// Sends a test notification to verify notification functionality
+    private func sendTestNotification() {
+        // Create a notification content
+        let content = UNMutableNotificationContent()
+        content.title = "Test Notification"
+        content.body = "Your notification settings are working properly!"
+        content.sound = .default
+
+        // Create a trigger for immediate delivery (5 seconds from now)
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
+
+        // Create a request with the content and trigger
+        let request = UNNotificationRequest(
+            identifier: "com.kepler471.Daily.testNotification",
+            content: content,
+            trigger: trigger
+        )
+
+        // Add the request to the notification center
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Error sending test notification: \(error.localizedDescription)")
+            } else {
+                print("Test notification scheduled successfully")
+            }
+        }
     }
 }
 

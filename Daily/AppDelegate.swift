@@ -8,6 +8,7 @@
 import SwiftUI
 import AppKit
 import SwiftData
+import UserNotifications
 
 // MARK: - App Delegate
 
@@ -17,7 +18,8 @@ import SwiftData
 /// - Configuring the application as a regular windowed app
 /// - Coordinating between AppKit and SwiftUI components
 /// - Setting up keyboard shortcuts
-class AppDelegate: NSObject, NSApplicationDelegate {
+/// - Managing notification permissions and handling
+class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     // MARK: Properties
 
     /// The application menu manager that handles the app menus
@@ -35,6 +37,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     /// Manager for handling keyboard shortcuts
     private var keyboardShortcutManager = KeyboardShortcutManager()
 
+    /// Manager for handling notifications
+    private var notificationManager = NotificationManager.shared
+
     // MARK: - Application Lifecycle
 
     /// Called when the application has finished launching
@@ -48,6 +53,32 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Start monitoring for keyboard shortcuts
         keyboardShortcutManager.startMonitoring()
+
+        // Set up notification handling and request permissions
+        setupNotifications()
+    }
+
+    /// Sets up notification handling and requests permissions
+    private func setupNotifications() {
+        // Set this class as the notification center delegate
+        UNUserNotificationCenter.current().delegate = self
+
+        // Request notification permission using async/await pattern
+        SwiftUI.Task {
+            do {
+                let (granted, error) = await notificationManager.requestAuthorization()
+
+                if let error = error {
+                    print("Error requesting notification permissions: \(error.localizedDescription)")
+                }
+
+                if granted {
+                    print("Notification permission granted")
+                } else {
+                    print("Notification permission denied")
+                }
+            }
+        }
     }
 
     // MARK: - Window Setup
@@ -76,5 +107,38 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         // Stop keyboard shortcut monitoring when the app terminates
         keyboardShortcutManager.stopMonitoring()
+    }
+
+    // MARK: - UNUserNotificationCenterDelegate
+
+    /// Called when a notification is delivered while the app is in the foreground
+    /// - Parameters:
+    ///   - center: The notification center
+    ///   - notification: The notification that arrived
+    ///   - completionHandler: A handler to execute with the presentation options
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        // Always show notifications even when the app is in the foreground
+        completionHandler([.banner, .sound, .badge])
+    }
+
+    /// Called when the user responds to a notification
+    /// - Parameters:
+    ///   - center: The notification center
+    ///   - response: The user's response to the notification
+    ///   - completionHandler: A completion handler to call when you're done processing the response
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        // Forward to the notification manager to handle
+        SwiftUI.Task {
+            await notificationManager.userNotificationCenter(center, didReceive: response)
+            completionHandler()
+        }
     }
 }

@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 // MARK: - TaskStackView
 
@@ -22,7 +23,10 @@ struct TaskStackView: View {
     
     /// Database context for saving task changes
     @Environment(\.modelContext) private var modelContext
-    
+
+    /// Settings manager for notification preferences
+    @EnvironmentObject private var settingsManager: SettingsManager
+
     /// Query for retrieving tasks from the database
     @Query private var tasks: [Task]
     
@@ -252,6 +256,11 @@ struct TaskStackView: View {
                         // Try to save the changes
                         do {
                             try modelContext.save()
+
+                            // Cancel notification for completed task
+                            SwiftUI.Task {
+                                await task.cancelNotification()
+                            }
                         } catch {
                             print("Error saving task completion state: \(error.localizedDescription)")
                         }
@@ -266,10 +275,17 @@ struct TaskStackView: View {
                 // For reopening, update model immediately
                 task.isCompleted = newCompletionState
                 tasksToRemove.remove(ObjectIdentifier(task))
-                
+
                 // Try to save the changes
                 do {
                     try modelContext.save()
+
+                    // Reschedule notification for reopened task
+                    if task.scheduledTime != nil {
+                        SwiftUI.Task {
+                            await task.scheduleNotification(settings: settingsManager)
+                        }
+                    }
                 } catch {
                     print("Error saving task completion state: \(error.localizedDescription)")
                 }
@@ -477,17 +493,19 @@ struct TaskStackView: View {
             .frame(height: 600)
             .padding()
             .modelContainer(TaskMockData.createPreviewContainer())
+            .environmentObject(SettingsManager())
             .tabItem {
                 Label("Required", systemImage: "checklist")
             }
             .tag(0)
-        
+
         TaskStackView(
             category: .suggested,
             verticalOffset: 20)
             .frame(height: 600)
             .padding()
             .modelContainer(TaskMockData.createPreviewContainer())
+            .environmentObject(SettingsManager())
             .tabItem {
                 Label("Suggested", systemImage: "checklist")
             }

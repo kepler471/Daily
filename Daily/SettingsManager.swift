@@ -34,12 +34,21 @@ class SettingsManager: ObservableObject {
     private enum Keys {
         /// Key for the launch at login preference
         static let launchAtLogin = "launchAtLogin"
-        
+
         /// Key for the hour at which tasks reset
         static let resetHour = "resetHour"
-        
+
         /// Key for tracking whether login instructions have been shown
         static let hasShownLoginItemInstructions = "hasShownLoginItemInstructions"
+
+        /// Key for whether required task notifications are enabled
+        static let requiredTaskNotificationsEnabled = "requiredTaskNotificationsEnabled"
+
+        /// Key for whether suggested task notifications are enabled
+        static let suggestedTaskNotificationsEnabled = "suggestedTaskNotificationsEnabled"
+
+        /// Key for the default reminder time (in minutes before task time)
+        static let defaultReminderMinutesBefore = "defaultReminderMinutesBefore"
     }
     
     // MARK: Properties
@@ -61,6 +70,22 @@ class SettingsManager: ObservableObject {
             UserDefaults.standard.set(resetHour, forKey: Keys.resetHour)
         }
     }
+
+    /// Whether notifications for required tasks are enabled
+    @Published var requiredTaskNotificationsEnabled: Bool {
+        didSet {
+            // Persist the change to UserDefaults
+            UserDefaults.standard.set(requiredTaskNotificationsEnabled, forKey: Keys.requiredTaskNotificationsEnabled)
+        }
+    }
+
+    /// Whether notifications for suggested tasks are enabled
+    @Published var suggestedTaskNotificationsEnabled: Bool {
+        didSet {
+            // Persist the change to UserDefaults
+            UserDefaults.standard.set(suggestedTaskNotificationsEnabled, forKey: Keys.suggestedTaskNotificationsEnabled)
+        }
+    }
     
     /// Helper for constructing the login item identifier
     private var loginItemIdentifier: String {
@@ -74,13 +99,26 @@ class SettingsManager: ObservableObject {
         // Load saved settings or use defaults
         self.launchAtLogin = UserDefaults.standard.bool(forKey: Keys.launchAtLogin)
         self.resetHour = UserDefaults.standard.integer(forKey: Keys.resetHour)
-        
+        self.requiredTaskNotificationsEnabled = UserDefaults.standard.bool(forKey: Keys.requiredTaskNotificationsEnabled)
+        self.suggestedTaskNotificationsEnabled = UserDefaults.standard.bool(forKey: Keys.suggestedTaskNotificationsEnabled)
+
         // Default to 4am for reset hour if not set
         if self.resetHour == 0 {
             self.resetHour = 4
             UserDefaults.standard.set(self.resetHour, forKey: Keys.resetHour)
         }
-        
+
+        // Default to notifications enabled for required tasks only
+        if UserDefaults.standard.object(forKey: Keys.requiredTaskNotificationsEnabled) == nil {
+            self.requiredTaskNotificationsEnabled = true
+            UserDefaults.standard.set(true, forKey: Keys.requiredTaskNotificationsEnabled)
+        }
+
+        if UserDefaults.standard.object(forKey: Keys.suggestedTaskNotificationsEnabled) == nil {
+            self.suggestedTaskNotificationsEnabled = false
+            UserDefaults.standard.set(false, forKey: Keys.suggestedTaskNotificationsEnabled)
+        }
+
         // Ensure login item status is synced on startup
         updateLoginItem()
     }
@@ -125,5 +163,7 @@ class SettingsManager: ObservableObject {
     func resetToDefaults() {
         launchAtLogin = false
         resetHour = 4
+        requiredTaskNotificationsEnabled = true
+        suggestedTaskNotificationsEnabled = false
     }
 }

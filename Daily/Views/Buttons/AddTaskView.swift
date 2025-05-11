@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 /// A button view that triggers the task creation overlay
 struct AddTaskButtonView: View {
@@ -58,6 +59,9 @@ struct AddTaskView: View {
 
     /// The model context for saving new tasks
     @Environment(\.modelContext) private var modelContext
+
+    /// The settings manager for notification preferences
+    @EnvironmentObject private var settingsManager: SettingsManager
 
     /// The title of the new task
     @State private var title = ""
@@ -242,6 +246,13 @@ struct AddTaskView: View {
                 scheduledTime: scheduledTime
             )
             modelContext.insert(newTask)
+
+            // Schedule notification for the task if it has a scheduled time
+            if newTask.scheduledTime != nil {
+                SwiftUI.Task {
+                    await newTask.scheduleNotification(settings: settingsManager)
+                }
+            }
         }
     }
     
@@ -276,4 +287,5 @@ struct AddTaskView: View {
 
 #Preview("Add Task View") {
     AddTaskView(isPresented: .constant(true))
+        .environmentObject(SettingsManager())
 }
