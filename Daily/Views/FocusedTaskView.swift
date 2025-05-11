@@ -34,6 +34,9 @@ struct FocusedTaskView: View {
     /// Tracks if the task is being hovered for hover effects
     @State private var isHovered: Bool = false
 
+    /// Whether the edit task view is being displayed
+    @State private var showingEditTask: Bool = false
+
     // MARK: - Initialization
 
     /// Creates a new focused task view that shows a specific task or the top required task
@@ -103,6 +106,13 @@ struct FocusedTaskView: View {
             }
             .padding(.top, 40)
         }
+        .overlay {
+            if let task = taskToDisplay, showingEditTask {
+                EditTaskView(task: task, isPresented: $showingEditTask)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: showingEditTask)
         .withCloseButton(
             action: { isPresented = false },
             size: 36,           // Bigger button (default is 28)
@@ -154,28 +164,42 @@ struct FocusedTaskView: View {
                 )
                 .foregroundColor(.blue)
             
-            // MARK: Complete Button
-            
-            Button(action: {
-                toggleTaskCompletion(task)
-                // Close the view after marking as complete
-                isPresented = false
-            }) {
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle")
-                    Text("Mark as Complete")
+            // MARK: Action Buttons
+
+            HStack(spacing: 20) {
+                // Complete Button
+                Button(action: {
+                    toggleTaskCompletion(task)
+                    // Close the view after marking as complete
+                    isPresented = false
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle")
+                        Text("Mark as Complete")
+                    }
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(
+                        Capsule()
+                            .fill(Color.green)
+                    )
                 }
-                .font(.headline)
-                .foregroundColor(.white)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .background(
-                    Capsule()
-                        .fill(Color.green)
-                )
+                .buttonStyle(PlainButtonStyle())
+                .accessibilityLabel("Mark \(task.title) as complete")
+
+                // Edit Button (Three Dots)
+                Button(action: {
+                    showingEditTask = true
+                }) {
+                    Image(systemName: "ellipsis.circle")
+                        .font(.system(size: 24))
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .accessibilityLabel("Edit task \(task.title)")
             }
-            .buttonStyle(PlainButtonStyle())
-            .accessibilityLabel("Mark \(task.title) as complete")
         }
         .padding(40)
         .background(
