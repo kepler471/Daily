@@ -50,10 +50,13 @@ struct TaskStackView: View {
     
     /// Optional category filter for the tasks
     var category: TaskCategory?
-    
+
+    /// Callback when a task is selected for focused view
+    var onTaskSelected: ((Task) -> Void)? = nil
+
     /// Set of tasks that should be visually removed due to completion
     @State private var tasksToRemove: Set<ObjectIdentifier> = []
-    
+
     /// Whether the stack is currently animating repositioning
     @State private var isRepositioning: Bool = false
     
@@ -64,12 +67,14 @@ struct TaskStackView: View {
     ///   - category: Optional category to filter tasks by
     ///   - verticalOffset: Constant spacing between cards in the stack
     ///   - scale: Scale factor for cards in the stack (1.0 = no scaling)
-    init(category: TaskCategory? = nil, verticalOffset: CGFloat = 20, scale: CGFloat = 1.0) {
+    ///   - onTaskSelected: Optional callback when a task is selected
+    init(category: TaskCategory? = nil, verticalOffset: CGFloat = 20, scale: CGFloat = 1.0, onTaskSelected: ((Task) -> Void)? = nil) {
         self.verticalOffset = verticalOffset
         self.offsetByIndex = nil
         self.scaleByIndex = nil
         self.scaleAmount = scale
         self.category = category
+        self.onTaskSelected = onTaskSelected
         
         // Use a combined predicate to get only incomplete tasks for this category
         if let category = category {
@@ -96,12 +101,14 @@ struct TaskStackView: View {
     ///   - category: Optional category to filter tasks by
     ///   - offsetByIndex: Function that calculates vertical offset based on card index
     ///   - scale: Scale factor for cards in the stack (1.0 = no scaling)
-    init(category: TaskCategory? = nil, offsetByIndex: @escaping (Int) -> CGFloat, scale: CGFloat = 1.0) {
+    ///   - onTaskSelected: Optional callback when a task is selected
+    init(category: TaskCategory? = nil, offsetByIndex: @escaping (Int) -> CGFloat, scale: CGFloat = 1.0, onTaskSelected: ((Task) -> Void)? = nil) {
         self.verticalOffset = 0 // Not used in this initialization
         self.offsetByIndex = offsetByIndex
         self.scaleByIndex = nil
         self.scaleAmount = scale
         self.category = category
+        self.onTaskSelected = onTaskSelected
         
         // Use a combined predicate to get only incomplete tasks for this category
         if let category = category {
@@ -128,12 +135,14 @@ struct TaskStackView: View {
     ///   - category: Optional category to filter tasks by
     ///   - offsetByIndex: Function that calculates vertical offset based on card index
     ///   - scaleByIndex: Function that calculates scale factor based on card index
-    init(category: TaskCategory? = .required, offsetByIndex: @escaping (Int) -> CGFloat, scaleByIndex: @escaping (Int) -> CGFloat) {
+    ///   - onTaskSelected: Optional callback when a task is selected
+    init(category: TaskCategory? = .required, offsetByIndex: @escaping (Int) -> CGFloat, scaleByIndex: @escaping (Int) -> CGFloat, onTaskSelected: ((Task) -> Void)? = nil) {
         self.verticalOffset = 0 // Not used in this initialization
         self.offsetByIndex = offsetByIndex
         self.scaleByIndex = scaleByIndex
         self.scaleAmount = 1.0 // Not used in this initialization
         self.category = category
+        self.onTaskSelected = onTaskSelected
         
         // Use a combined predicate to get only incomplete tasks for this category
         if let category = category {
@@ -167,7 +176,12 @@ struct TaskStackView: View {
                     taskCardView(for: task, at: index)
                         .accessibilityElement(children: .contain)
                         .accessibilityLabel("\(task.title), task \(index + 1) of \(tasks.count)")
-                        .accessibilityHint("Hover to fan out all tasks, or click to mark as complete")
+                        .accessibilityHint("Hover to fan out all tasks, tap to view details, or click complete button")
+                        .onTapGesture {
+                            if let onTaskSelected = onTaskSelected {
+                                onTaskSelected(task)
+                            }
+                        }
                 }
             }
         }

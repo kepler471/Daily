@@ -39,6 +39,9 @@ struct MainView: View {
     /// Whether the focused task view is being displayed
     @State private var showingFocusedTask = false
 
+    /// The currently selected task for focused view
+    @State private var focusedTask: Task? = nil
+
     /// Access to the task reset functionality
     @EnvironmentObject private var resetTaskManager: TaskResetManager
 
@@ -63,6 +66,7 @@ struct MainView: View {
         // Show focused task view on app launch if there are required tasks
         if !requiredTasks.isEmpty {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.focusedTask = self.requiredTasks.first
                 self.showingFocusedTask = true
             }
         }
@@ -116,6 +120,7 @@ struct MainView: View {
             object: nil,
             queue: .main
         ) { _ in
+            self.focusedTask = self.requiredTasks.first
             self.showingFocusedTask = true
         }
     }
@@ -129,12 +134,18 @@ struct MainView: View {
             // Task columns layout
             HStack(spacing: 0) {
                 // Required Tasks Column
-                TaskStackView(category: .required, verticalOffset: 20, scale: 0.85)
-                    .frame(minWidth: 0, maxWidth: .infinity)
-                
+                TaskStackView(category: .required, verticalOffset: 20, scale: 0.85, onTaskSelected: { task in
+                    focusedTask = task
+                    showingFocusedTask = true
+                })
+                .frame(minWidth: 0, maxWidth: .infinity)
+
                 // Suggested Tasks Column
-                TaskStackView(category: .suggested, verticalOffset: 20, scale: 0.85)
-                    .frame(minWidth: 0, maxWidth: .infinity)
+                TaskStackView(category: .suggested, verticalOffset: 20, scale: 0.85, onTaskSelected: { task in
+                    focusedTask = task
+                    showingFocusedTask = true
+                })
+                .frame(minWidth: 0, maxWidth: .infinity)
             }
             .padding(.top, 200)  // Space for the fixed control bar and fan-out space
             
@@ -202,7 +213,7 @@ struct MainView: View {
 
             // Focused task overlay
             if showingFocusedTask {
-                FocusedTaskView(isPresented: $showingFocusedTask)
+                FocusedTaskView(task: focusedTask, isPresented: $showingFocusedTask)
                     .transition(.opacity)
                     .zIndex(100)
             }

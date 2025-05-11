@@ -10,52 +10,58 @@ import SwiftData
 
 // MARK: - Focused Task View
 
-/// A fullscreen overlay view that displays the top required task
+/// A fullscreen overlay view that displays a task in detail
 ///
 /// FocusedTaskView provides a modal interface for:
-/// - Viewing the highest priority required task
+/// - Viewing a task in detail
 /// - Marking the task as complete
 /// - Interacting with the task with visual feedback
 struct FocusedTaskView: View {
     // MARK: Properties
-    
+
     /// Database context for saving task changes
     @Environment(\.modelContext) private var modelContext
-    
-    /// Live query for required tasks, sorted by order
+
+    /// The specific task to display, or nil to show the top required task
+    var selectedTask: Task?
+
+    /// Live query for required tasks, sorted by order (used when no specific task is provided)
     @Query private var requiredTasks: [Task]
-    
+
     /// Binding to control the visibility of this view
     @Binding var isPresented: Bool
-    
+
     /// Tracks if the task is being hovered for hover effects
     @State private var isHovered: Bool = false
-    
+
     // MARK: - Initialization
-    
-    /// Creates a new focused task view that shows the top required task
-    /// - Parameter isPresented: Binding to control the visibility of the view
-    init(isPresented: Binding<Bool>) {
+
+    /// Creates a new focused task view that shows a specific task or the top required task
+    /// - Parameters:
+    ///   - task: Optional specific task to display
+    ///   - isPresented: Binding to control the visibility of the view
+    init(task: Task? = nil, isPresented: Binding<Bool>) {
+        self.selectedTask = task
         self._isPresented = isPresented
-        
+
         // Configure sorting to ensure consistent display order
         let sortDescriptors = [
             SortDescriptor(\Task.order),
             SortDescriptor(\Task.createdAt)
         ]
-        
+
         // Query to get required tasks that are not completed
         _requiredTasks = Query(
             filter: Task.Predicates.byCategoryAndCompletion(category: .required, isCompleted: false),
             sort: sortDescriptors
         )
     }
-    
+
     // MARK: - Computed Properties
-    
-    /// Returns the top required task if available
-    private var topTask: Task? {
-        return requiredTasks.first
+
+    /// Returns the task to display - either the selected task or the top required task
+    private var taskToDisplay: Task? {
+        return selectedTask ?? requiredTasks.first
     }
     
     // MARK: - View Body
@@ -73,16 +79,9 @@ struct FocusedTaskView: View {
             // MARK: Content
 
             VStack(spacing: 20) {
-                // Title section
-                Text("Focus on This Task")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, 20)
-                
                 // MARK: Task Display
-                
-                if let task = topTask {
+
+                if let task = taskToDisplay {
                     // Display the task
                     focusedTaskCard(for: task)
                         .scaleEffect(isHovered ? 1.05 : 1.0)
