@@ -110,122 +110,155 @@ struct EditTaskView: View {
             // MARK: Content
             
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: 20) {
                     // Title section
                     Text("Edit Task")
                         .font(.largeTitle)
                         .fontWeight(.bold)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.top, 20)
-                    
-                    // MARK: - Task title
-                    
-                    TextField("Task name", text: $title)
-                        .font(.system(size: 18, weight: .medium))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 14)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.1)))
-                        .focused($isTitleFieldFocused)
-                        .accessibilityIdentifier("taskTitleField")
-                    
-                    // MARK: - Category selection
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Category")
-                            .font(.headline)
-                            .foregroundColor(.secondary)
-                        
-                        Picker("", selection: $selectedCategory) {
-                            Text("Required").tag(TaskCategory.required)
-                            Text("Suggested").tag(TaskCategory.suggested)
+                        .padding(.bottom, 10)
+
+                    // MARK: Task Card
+
+                    VStack(spacing: 20) {
+                        // MARK: - Task title
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Title")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+
+                            TextField("Task name", text: $title)
+                                .font(.system(size: 18, weight: .medium))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 14)
+                                .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.1)))
+                                .focused($isTitleFieldFocused)
+                                .accessibilityIdentifier("taskTitleField")
                         }
-                        .labelsHidden()
-                        .pickerStyle(.segmented)
-                        .padding(.vertical, 5)
-                        .accessibilityIdentifier("categoryPicker")
-                        .accessibilityLabel("Task Category")
-                    }
-                    
-                    // MARK: - Time settings
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Toggle("Schedule Time", isOn: $hasScheduledTime)
-                            .font(.headline)
-                            .foregroundColor(.secondary)
-                        
-                        if hasScheduledTime {
-                            // Time selection components
-                            HStack(alignment: .center, spacing: 4) {
-                                // Hours picker
-                                VStack(alignment: .center, spacing: 2) {
-                                    Picker("", selection: $selectedHour) {
-                                        ForEach(1...12, id: \.self) { hour in
-                                            Text("\(hour)").tag(hour == 12 ? 0 : hour)
-                                        }
-                                    }
-                                    .labelsHidden()
-                                    .frame(width: 60)
-                                    .fixedSize()
-                                    .accessibilityLabel("Hour")
-                                }
-                                
-                                // Minutes picker
-                                VStack(alignment: .center, spacing: 2) {
-                                    Picker("", selection: $selectedMinute) {
-                                        ForEach(0..<60) { minute in
-                                            Text(String(format: "%02d", minute)).tag(minute)
-                                        }
-                                    }
-                                    .labelsHidden()
-                                    .frame(width: 60)
-                                    .fixedSize()
-                                    .accessibilityLabel("Minute")
-                                }
-                                
-                                // AM/PM picker
-                                VStack(alignment: .center, spacing: 2) {
-                                    Picker("", selection: $isAM) {
-                                        Text("AM").tag(true)
-                                        Text("PM").tag(false)
-                                    }
-                                    .pickerStyle(.segmented)
-                                    .frame(width: 100)
-                                    .accessibilityLabel("AM or PM")
-                                }
+
+                        // MARK: - Category selection
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Category")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+
+                            Picker("", selection: $selectedCategory) {
+                                Text("Required").tag(TaskCategory.required)
+                                Text("Suggested").tag(TaskCategory.suggested)
                             }
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 6)
-                            .frame(maxWidth: .infinity)
-                            .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.1)))
+                            .labelsHidden()
+                            .pickerStyle(.segmented)
+                            .padding(.vertical, 5)
+                            .accessibilityIdentifier("categoryPicker")
+                            .accessibilityLabel("Task Category")
                         }
+
+                        // MARK: - Time settings
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Toggle("Schedule Time", isOn: $hasScheduledTime)
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+
+                            if hasScheduledTime {
+                                // Time selection components
+                                HStack(alignment: .center, spacing: 4) {
+                                    // Hours picker
+                                    VStack(alignment: .center, spacing: 2) {
+                                        Picker("", selection: $selectedHour) {
+                                            ForEach(1...12, id: \.self) { hour in
+                                                Text("\(hour)").tag(hour == 12 ? 0 : hour)
+                                            }
+                                        }
+                                        .labelsHidden()
+                                        .frame(width: 60)
+                                        .fixedSize()
+                                        .accessibilityLabel("Hour")
+                                    }
+
+                                    // Minutes picker
+                                    VStack(alignment: .center, spacing: 2) {
+                                        Picker("", selection: $selectedMinute) {
+                                            ForEach(0..<60) { minute in
+                                                Text(String(format: "%02d", minute)).tag(minute)
+                                            }
+                                        }
+                                        .labelsHidden()
+                                        .frame(width: 60)
+                                        .fixedSize()
+                                        .accessibilityLabel("Minute")
+                                    }
+
+                                    // AM/PM picker
+                                    VStack(alignment: .center, spacing: 2) {
+                                        Picker("", selection: $isAM) {
+                                            Text("AM").tag(true)
+                                            Text("PM").tag(false)
+                                        }
+                                        .pickerStyle(.segmented)
+                                        .frame(width: 100)
+                                        .accessibilityLabel("AM or PM")
+                                    }
+                                }
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 6)
+                                .frame(maxWidth: .infinity)
+                                .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.1)))
+                            }
+                        }
+
+                        Spacer()
+                            .frame(height: 10)
+
+                        // MARK: - Save button
+
+                        Button {
+                            saveChanges()
+                            isPresented = false
+                        } label: {
+                            Text("Save Changes")
+                                .frame(maxWidth: .infinity)
+                                .foregroundColor(.white)
+                                .padding(.vertical, 16)
+                                .background(
+                                    Capsule()
+                                        .fill(title.isEmpty ? Color.gray.opacity(0.5) : selectedCategory == .required ? Color.blue : Color.purple)
+                                )
+                                .contentShape(Rectangle())
+                        }
+                        .disabled(title.isEmpty)
+                        .buttonStyle(.borderless)
+                        .accessibilityIdentifier("saveChangesButton")
+                        .accessibilityHint("Saves task changes")
                     }
-                    
-                    Spacer()
-                        .frame(height: 20)
-                    
-                    // MARK: - Save button
-                    
-                    Button {
-                        saveChanges()
-                        isPresented = false
-                    } label: {
-                        Text("Save Changes")
-                            .frame(maxWidth: .infinity)
-                            .foregroundColor(.white)
-                            .padding(.vertical, 16)
-                            .background(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .fill(title.isEmpty ? Color.gray.opacity(0.5) : selectedCategory == .required ? Color.blue : Color.green)
+                    .padding(30)
+                    .background(
+                        Rectangle()
+                            .fill(.regularMaterial)
+                            .opacity(0.9)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(
+                                        LinearGradient(
+                                            colors: [
+                                                selectedCategory == .required ? .blue.opacity(0.5) : .purple.opacity(0.5),
+                                                selectedCategory == .required ? .teal.opacity(0.3) : .pink.opacity(0.3)
+                                            ],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ),
+                                        lineWidth: 2
+                                    )
                             )
-                            .contentShape(Rectangle())
-                    }
-                    .disabled(title.isEmpty)
-                    .buttonStyle(.borderless)
-                    .accessibilityIdentifier("saveChangesButton")
-                    .accessibilityHint("Saves task changes")
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
                 }
                 .padding(.horizontal, 40)
-                .padding(.vertical, 40)
+                .padding(.vertical, 30)
                 .frame(maxWidth: 600)
             }
         }

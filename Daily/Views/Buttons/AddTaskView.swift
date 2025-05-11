@@ -107,112 +107,160 @@ struct AddTaskView: View {
 
             // MARK: Content
 
-            VStack(spacing: 16) {
+            VStack(spacing: 20) {
                 // Title section
                 Text("New Task")
                     .font(.largeTitle)
                     .fontWeight(.bold)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.top, 20)
+                    .padding(.bottom, 10)
 
-                // MARK: - Task title
+                // MARK: Task Card
 
-                TextField("Task name", text: $title)
-                    .font(.system(size: 18, weight: .medium))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 14)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.1)))
-                    .focused($isTitleFieldFocused)
-                    .accessibilityIdentifier("taskTitleField")
-                    .onSubmit {
-                        if !title.isEmpty {
-                            addTask()
-                            isPresented = false
-                        }
+                VStack(spacing: 20) {
+                    // MARK: - Task title
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Title")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+
+                        TextField("Task name", text: $title)
+                            .font(.system(size: 18, weight: .medium))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 14)
+                            .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.1)))
+                            .focused($isTitleFieldFocused)
+                            .accessibilityIdentifier("taskTitleField")
+                            .onSubmit {
+                                if !title.isEmpty {
+                                    addTask()
+                                    isPresented = false
+                                }
+                            }
                     }
 
-                // MARK: - Category selection
-                Picker("", selection: $selectedCategory) {
-                    Text("Required").tag(TaskCategory.required)
-                    Text("Suggested").tag(TaskCategory.suggested)
-                }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-                .padding(.vertical, 5)
-                .accessibilityIdentifier("categoryPicker")
-                .accessibilityLabel("Task Category")
+                    // MARK: - Category selection
 
-                // MARK: - Custom time picker
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Category")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
 
-                // Time selection components
-                HStack(alignment: .center, spacing: 4) {
-                    // Hours picker
-                    VStack(alignment: .center, spacing: 2) {
-                        Picker("", selection: $selectedHour) {
-                            ForEach(1...12, id: \.self) { hour in
-                                Text("\(hour)").tag(hour == 12 ? 0 : hour)
-                            }
+                        Picker("", selection: $selectedCategory) {
+                            Text("Required").tag(TaskCategory.required)
+                            Text("Suggested").tag(TaskCategory.suggested)
                         }
                         .labelsHidden()
-                        .frame(width: 60)
-                        .fixedSize()
-                        .accessibilityLabel("Hour")
-                    }
-
-                    // Minutes picker
-                    VStack(alignment: .center, spacing: 2) {
-                        Picker("", selection: $selectedMinute) {
-                            ForEach(0..<60) { minute in
-                                Text(String(format: "%02d", minute)).tag(minute)
-                            }
-                        }
-                        .labelsHidden()
-                        .frame(width: 60)
-                        .fixedSize()
-                        .accessibilityLabel("Minute")
-                    }
-
-                    // AM/PM picker
-                    VStack(alignment: .center, spacing: 2) {
-                        Picker("", selection: $isAM) {
-                            Text("AM").tag(true)
-                            Text("PM").tag(false)
-                        }
                         .pickerStyle(.segmented)
-                        .frame(width: 100)
-                        .accessibilityLabel("AM or PM")
+                        .padding(.vertical, 5)
+                        .accessibilityIdentifier("categoryPicker")
+                        .accessibilityLabel("Task Category")
                     }
-                }
-                .padding(.horizontal, 6)
-                .padding(.vertical, 6)
-                .frame(maxWidth: .infinity)
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.1)))
 
-                Spacer()
+                    // MARK: - Time settings
 
-                // Add task button - only enabled if both title and time are set
-                Button {
-                    addTask()
-                    isPresented = false
-                } label: {
-                    Text("Add Task")
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Scheduled Time")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+
+                        // Time selection components
+                        HStack(alignment: .center, spacing: 4) {
+                            // Hours picker
+                            VStack(alignment: .center, spacing: 2) {
+                                Picker("", selection: $selectedHour) {
+                                    ForEach(1...12, id: \.self) { hour in
+                                        Text("\(hour)").tag(hour == 12 ? 0 : hour)
+                                    }
+                                }
+                                .labelsHidden()
+                                .frame(width: 60)
+                                .fixedSize()
+                                .accessibilityLabel("Hour")
+                            }
+
+                            // Minutes picker
+                            VStack(alignment: .center, spacing: 2) {
+                                Picker("", selection: $selectedMinute) {
+                                    ForEach(0..<60) { minute in
+                                        Text(String(format: "%02d", minute)).tag(minute)
+                                    }
+                                }
+                                .labelsHidden()
+                                .frame(width: 60)
+                                .fixedSize()
+                                .accessibilityLabel("Minute")
+                            }
+
+                            // AM/PM picker
+                            VStack(alignment: .center, spacing: 2) {
+                                Picker("", selection: $isAM) {
+                                    Text("AM").tag(true)
+                                    Text("PM").tag(false)
+                                }
+                                .pickerStyle(.segmented)
+                                .frame(width: 100)
+                                .accessibilityLabel("AM or PM")
+                            }
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 6)
                         .frame(maxWidth: .infinity)
-                        .foregroundColor(.white)
-                        .padding(.vertical, 16)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(title.isEmpty ? Color.gray.opacity(0.5) : selectedCategory == .required ? Color.blue : Color.green)
-                        )
-                        .contentShape(Rectangle()) // Make entire area clickable
+                        .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.1)))
+                    }
+
+                    Spacer()
+                        .frame(height: 10)
+
+                    // MARK: - Add button
+
+                    Button {
+                        addTask()
+                        isPresented = false
+                    } label: {
+                        Text("Add Task")
+                            .frame(maxWidth: .infinity)
+                            .foregroundColor(.white)
+                            .padding(.vertical, 16)
+                            .background(
+                                Capsule()
+                                    .fill(title.isEmpty ? Color.gray.opacity(0.5) : selectedCategory == .required ? Color.blue : Color.purple)
+                            )
+                            .contentShape(Rectangle())
+                    }
+                    .disabled(title.isEmpty)
+                    .buttonStyle(.borderless)
+                    .focusable(false)
+                    .accessibilityIdentifier("addTaskButton")
+                    .accessibilityHint("Creates a new task with the provided details and scheduled time")
                 }
-                .disabled(title.isEmpty)
-                .buttonStyle(.borderless) // Use borderless style for better hit testing
-                .focusable(false)
-                .accessibilityIdentifier("addTaskButton")
-                .accessibilityHint("Creates a new task with the provided details and scheduled time")
+                .padding(30)
+                .background(
+                    Rectangle()
+                        .fill(.regularMaterial)
+                        .opacity(0.9)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(
+                                    LinearGradient(
+                                        colors: [
+                                            selectedCategory == .required ? .blue.opacity(0.5) : .purple.opacity(0.5),
+                                            selectedCategory == .required ? .teal.opacity(0.3) : .pink.opacity(0.3)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 2
+                                )
+                        )
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
             }
             .padding(.horizontal, 40)
-            .padding(.vertical, 40)
+            .padding(.vertical, 30)
             .frame(maxWidth: 600)
         }
         .onAppear {
