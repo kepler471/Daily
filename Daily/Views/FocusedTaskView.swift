@@ -61,35 +61,24 @@ struct FocusedTaskView: View {
     // MARK: - View Body
     
     var body: some View {
-        ZStack(alignment: .topTrailing) {
+        ZStack {
             // MARK: Background
-            
+
             // Translucent blurred background overlay
             Rectangle()
                 .fill(.ultraThinMaterial)
                 .opacity(0.85)
                 .ignoresSafeArea()
-            
-            // MARK: Close Button
-            
-            Button(action: { isPresented = false }) {
-                Image(systemName: "xmark.circle.fill")
-                    .symbolRenderingMode(.hierarchical)
-                    .font(.title)
-                    .foregroundColor(.secondary)
-                    .padding()
-            }
-            .accessibilityLabel("Close")
-            
+
             // MARK: Content
-            
+
             VStack(spacing: 20) {
                 // Title section
                 Text("Focus on This Task")
                     .font(.largeTitle)
                     .fontWeight(.bold)
                     .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, 40)
+                    .padding(.top, 20)
                 
                 // MARK: Task Display
                 
@@ -113,8 +102,13 @@ struct FocusedTaskView: View {
                     Spacer()
                 }
             }
-            .padding(.top, 60)
+            .padding(.top, 40)
         }
+        .withCloseButton(
+            action: { isPresented = false },
+            size: 36,           // Bigger button (default is 28)
+            iconSize: 18        // Bigger X icon (default is 14)
+        )
     }
     
     // MARK: - Task Card View
