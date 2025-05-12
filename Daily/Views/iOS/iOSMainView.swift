@@ -8,6 +8,8 @@
 import SwiftUI
 import SwiftData
 
+#if os(iOS)
+
 /// The primary interface view for the Daily app on iOS
 ///
 /// iOSMainView serves as the main content view displayed on iOS devices.
@@ -478,3 +480,5 @@ struct iOSMainView: View {
         .environmentObject(SettingsManager())
         .environmentObject(TodoResetManager(modelContext: ModelContext(TodoMockData.createPreviewContainer())))
 }
+
+#endif

@@ -156,24 +156,8 @@ extension EnvironmentValues {
 
 // MARK: - View Modifiers
 
-/// A view modifier that conditionally applies a modifier based on platform
-struct PlatformViewModifier<Content: View>: ViewModifier {
-    private let content: (Content) -> Content
-    private let isEnabled: Bool
-    
-    init(isEnabled: Bool, @ViewBuilder content: @escaping (Content) -> Content) {
-        self.content = content
-        self.isEnabled = isEnabled
-    }
-    
-    func body(content: Content) -> some View {
-        if isEnabled {
-            self.content(content)
-        } else {
-            content
-        }
-    }
-}
+/// Simple helper functions for platform-specific view modifications
+/// These avoid the need for a full ViewModifier implementation
 
 /// View extension for platform-specific modifications
 extension View {

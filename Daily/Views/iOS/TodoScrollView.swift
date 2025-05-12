@@ -8,6 +8,8 @@
 import SwiftUI
 import SwiftData
 
+#if os(iOS)
+
 /// A scroll view that displays todos for iOS devices
 ///
 /// TodoScrollView provides a simple, touch-friendly interface for displaying todos on iOS:
@@ -376,3 +378,5 @@ struct TodoScrollView: View {
         .environmentObject(SettingsManager())
         .modelContainer(ModelContainer(for: Todo.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
 }
+
+#endif

@@ -6,9 +6,11 @@
 //
 
 import SwiftUI
-import UIKit
 import SwiftData
 import UserNotifications
+
+#if os(iOS)
+import UIKit
 
 // MARK: - iOS App Delegate
 
@@ -52,6 +54,7 @@ class iOSAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterD
     
     /// Called when the application becomes active
     /// - Parameter application: The singleton UIApplication instance
+    @MainActor
     func applicationDidBecomeActive(_ application: UIApplication) {
         // When app becomes active, synchronize notifications with database
         Task {
@@ -67,20 +70,23 @@ class iOSAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterD
                 } catch {
                     print("Error fetching todos for notification sync: \(error)")
                     // If we can't fetch todos, just refresh the badge count
-                    notificationManager.refreshBadgeCount()
+                    await notificationManager.refreshBadgeCount()
                 }
             } else {
                 // If model container isn't available, just refresh the badge
-                notificationManager.refreshBadgeCount()
+                await notificationManager.refreshBadgeCount()
             }
         }
     }
     
     /// Called when the application is about to enter the background
     /// - Parameter application: The singleton UIApplication instance
+    @MainActor
     func applicationDidEnterBackground(_ application: UIApplication) {
         // Refresh badge count when app enters background
-        notificationManager.refreshBadgeCount()
+        Task {
+            await notificationManager.refreshBadgeCount()
+        }
     }
     
     /// Sets up the notification manager with the model context
@@ -150,8 +156,8 @@ class iOSAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterD
         }
         
         // Ensure badge count is updated
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            self.notificationManager.refreshBadgeCount()
+        Task {
+            await notificationManager.refreshBadgeCount()
         }
     }
     
@@ -204,16 +210,22 @@ class iOSSceneDelegate: UIResponder, UIWindowSceneDelegate {
     
     /// Called when the scene becomes active
     /// - Parameter scene: The scene that became active
+    @MainActor
     func sceneDidBecomeActive(_ scene: UIScene) {
         // Refresh badge count
-        CrossPlatformNotificationManager.shared.refreshBadgeCount()
+        Task {
+            await CrossPlatformNotificationManager.shared.refreshBadgeCount()
+        }
     }
     
     /// Called when the scene enters the background
     /// - Parameter scene: The scene that entered the background
+    @MainActor
     func sceneDidEnterBackground(_ scene: UIScene) {
         // Refresh badge count
-        CrossPlatformNotificationManager.shared.refreshBadgeCount()
+        Task {
+            await CrossPlatformNotificationManager.shared.refreshBadgeCount()
+        }
         
         // Save any changes to the model context
         do {
@@ -227,3 +239,4 @@ class iOSSceneDelegate: UIResponder, UIWindowSceneDelegate {
         }
     }
 }
+#endif
