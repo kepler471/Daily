@@ -1,5 +1,5 @@
 //
-//  AddTaskView.swift
+//  AddTodoView.swift
 //  Daily
 //
 //  Created by Stelios Georgiou on 06/05/2025.
@@ -9,22 +9,22 @@ import SwiftUI
 import SwiftData
 import UserNotifications
 
-/// A view that provides the user interface for creating a new task
-// TODO: Wrap up this UI into a Task Card like View
-struct AddTaskView: View {
+/// A view that provides the user interface for creating a new todo
+// TODO: Wrap up this UI into a Todo Card like View
+struct AddTodoView: View {
     // MARK: - Environment and State
 
-    /// The model context for saving new tasks
+    /// The model context for saving new todos
     @Environment(\.modelContext) private var modelContext
 
     /// The settings manager for notification preferences
     @EnvironmentObject private var settingsManager: SettingsManager
 
-    /// The title of the new task
+    /// The title of the new todo
     @State private var title = ""
 
-    /// The selected category for the new task
-    @State private var selectedCategory: TaskCategory = .required
+    /// The selected category for the new todo
+    @State private var selectedCategory: TodoCategory = .required
 
     /// Components for the custom time picker
     @State private var selectedHour = Calendar.current.component(.hour, from: Date()) % 12
@@ -34,7 +34,7 @@ struct AddTaskView: View {
     /// Binding to control the visibility of this view
     @Binding var isPresented: Bool
 
-    /// The scheduled time for the task calculated from picker components
+    /// The scheduled time for the todo calculated from picker components
     private var scheduledTime: Date {
         let calendar = Calendar.current
         let hour = selectedHour + (isAM ? 0 : 12)
@@ -70,33 +70,33 @@ struct AddTaskView: View {
 
             VStack(spacing: 20) {
                 // Title section
-                Text("New Task")
+                Text("New Todo")
                     .font(.largeTitle)
                     .fontWeight(.bold)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.top, 20)
                     .padding(.bottom, 10)
 
-                // MARK: Task Card
+                // MARK: Todo Card
 
                 VStack(spacing: 20) {
-                    // MARK: - Task title
+                    // MARK: - Todo title
 
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Title")
                             .font(.headline)
                             .foregroundColor(.secondary)
 
-                        TextField("Task name", text: $title)
+                        TextField("Todo name", text: $title)
                             .font(.system(size: 18, weight: .medium))
                             .padding(.horizontal, 12)
                             .padding(.vertical, 14)
                             .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.1)))
                             .focused($isTitleFieldFocused)
-                            .accessibilityIdentifier("taskTitleField")
+                            .accessibilityIdentifier("todoTitleField")
                             .onSubmit {
                                 if !title.isEmpty {
-                                    addTask()
+                                    addTodo()
                                     isPresented = false
                                 }
                             }
@@ -110,14 +110,14 @@ struct AddTaskView: View {
                             .foregroundColor(.secondary)
 
                         Picker("", selection: $selectedCategory) {
-                            Text("Required").tag(TaskCategory.required)
-                            Text("Suggested").tag(TaskCategory.suggested)
+                            Text("Required").tag(TodoCategory.required)
+                            Text("Suggested").tag(TodoCategory.suggested)
                         }
                         .labelsHidden()
                         .pickerStyle(.segmented)
                         .padding(.vertical, 5)
                         .accessibilityIdentifier("categoryPicker")
-                        .accessibilityLabel("Task Category")
+                        .accessibilityLabel("Todo Category")
                     }
 
                     // MARK: - Time settings
@@ -178,10 +178,10 @@ struct AddTaskView: View {
                     // MARK: - Add button
 
                     Button {
-                        addTask()
+                        addTodo()
                         isPresented = false
                     } label: {
-                        Text("Add Task")
+                        Text("Add Todo")
                             .frame(maxWidth: .infinity)
                             .foregroundColor(.white)
                             .padding(.vertical, 16)
@@ -194,8 +194,8 @@ struct AddTaskView: View {
                     .disabled(title.isEmpty)
                     .buttonStyle(.borderless)
                     .focusable(false)
-                    .accessibilityIdentifier("addTaskButton")
-                    .accessibilityHint("Creates a new task with the provided details and scheduled time")
+                    .accessibilityIdentifier("addTodoButton")
+                    .accessibilityHint("Creates a new todo with the provided details and scheduled time")
                 }
                 .padding(30)
                 .background(
@@ -241,42 +241,42 @@ struct AddTaskView: View {
     
     // MARK: - Initialization
 
-    /// Creates a new add task view
+    /// Creates a new add todo view
     /// - Parameter isPresented: Binding to control the visibility of the view
     init(isPresented: Binding<Bool>) {
         self._isPresented = isPresented
     }
 
-    /// Creates and saves a new task with the current input values
-    private func addTask() {
+    /// Creates and saves a new todo with the current input values
+    private func addTodo() {
         withAnimation {
-            let newTask = Task(
+            let newTodo = Todo(
                 title: title,
                 order: getNextOrder(),
                 category: selectedCategory,
                 scheduledTime: scheduledTime
             )
-            modelContext.insert(newTask)
+            modelContext.insert(newTodo)
 
-            // Schedule notification for the task if it has a scheduled time
-            if newTask.scheduledTime != nil {
-                SwiftUI.Task {
-                    await newTask.scheduleNotification(settings: settingsManager)
+            // Schedule notification for the todo if it has a scheduled time
+            if newTodo.scheduledTime != nil {
+                Task {
+                    await newTodo.scheduleNotification(settings: settingsManager)
                 }
             }
         }
     }
     
-    /// Calculates the next available order value for sorting tasks
+    /// Calculates the next available order value for sorting todos
     /// - Returns: The next order value for the selected category
     private func getNextOrder() -> Int {
         do {
             let categoryString = selectedCategory.rawValue
-            var descriptor = FetchDescriptor<Task>(
-                sortBy: [SortDescriptor(\Task.order, order: .reverse)]
+            var descriptor = FetchDescriptor<Todo>(
+                sortBy: [SortDescriptor(\Todo.order, order: .reverse)]
             )
-            descriptor.predicate = #Predicate<Task> { task in
-                task.categoryRaw == categoryString
+            descriptor.predicate = #Predicate<Todo> { todo in
+                todo.categoryRaw == categoryString
             }
             descriptor.fetchLimit = 1
             
@@ -291,7 +291,7 @@ struct AddTaskView: View {
 
 // MARK: - Previews
 
-#Preview("Add Task View") {
-    AddTaskView(isPresented: .constant(true))
+#Preview("Add Todo View") {
+    AddTodoView(isPresented: .constant(true))
         .environmentObject(SettingsManager())
 }

@@ -1,5 +1,5 @@
 //
-//  TaskResetManager.swift
+//  TodoResetManager.swift
 //  Daily
 //
 //  Created by Stelios Georgiou on 08/05/2025.
@@ -13,25 +13,25 @@ import SwiftUI
 
 // MARK: - Notification Constants
 
-/// Extension for centralizing notification names used in the task reset system
+/// Extension for centralizing notification names used in the todo reset system
 extension Notification.Name {
-    /// Notification sent when tasks are reset (for UI updates)
-    static let tasksResetNotification = Notification.Name("TasksResetNotification")
+    /// Notification sent when todos are reset (for UI updates)
+    static let todosResetNotification = Notification.Name("TodosResetNotification")
 }
 
 // MARK: - ModelContext Extensions
-// Note: ModelContext extensions are centralized in Task+Extensions.swift
+// Note: ModelContext extensions are centralized in Todo+Extensions.swift
 
-// MARK: - Task Reset Manager
+// MARK: - Todo Reset Manager
 
-/// Manages the automatic reset of tasks at a specified time each day
+/// Manages the automatic reset of todos at a specified time each day
 ///
-/// TaskResetManager is responsible for:
-/// - Scheduling the daily reset of tasks
+/// TodoResetManager is responsible for:
+/// - Scheduling the daily reset of todos
 /// - Handling manual reset requests
-/// - Persisting task completion state
+/// - Persisting todo completion state
 /// - Notifying the UI of changes
-class TaskResetManager: ObservableObject {
+class TodoResetManager: ObservableObject {
     // MARK: Properties
     
     /// Timer that triggers the reset at the scheduled time
@@ -43,13 +43,13 @@ class TaskResetManager: ObservableObject {
     /// Set to store Combine subscription cancellables
     private var cancellables = Set<AnyCancellable>()
     
-    /// The hour (in 24-hour format) when tasks should reset
+    /// The hour (in 24-hour format) when todos should reset
     private let resetHour: Int = 4
     
     // MARK: - Initialization
     
-    /// Creates a new TaskResetManager
-    /// - Parameter modelContext: The SwiftData model context to use for resetting tasks
+    /// Creates a new TodoResetManager
+    /// - Parameter modelContext: The SwiftData model context to use for resetting todos
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
         
@@ -75,17 +75,17 @@ class TaskResetManager: ObservableObject {
         let nextResetDate = calculateNextResetDate()
         let timeInterval = nextResetDate.timeIntervalSinceNow
         
-        print("Tasks will reset at \(nextResetDate.formatted(date: .complete, time: .complete))")
+        print("Todos will reset at \(nextResetDate.formatted(date: .complete, time: .complete))")
         
         // Schedule the timer
         timer = Timer.scheduledTimer(withTimeInterval: timeInterval, repeats: false) { [weak self] _ in
-            self?.resetAllTasks()
+            self?.resetAllTodos()
             self?.scheduleNextReset() // Schedule the next day's reset
         }
     }
     
     /// Calculates the next reset date based on the reset hour
-    /// - Returns: The next date when tasks should reset
+    /// - Returns: The next date when todos should reset
     internal func calculateNextResetDate() -> Date {
         let now = Date()
         let calendar = Calendar.current
@@ -119,24 +119,24 @@ class TaskResetManager: ObservableObject {
         }
     }
     
-    // MARK: - Task Reset Operations
+    // MARK: - Todo Reset Operations
     
-    /// Resets all tasks to incomplete
+    /// Resets all todos to incomplete
     ///
     /// This method:
-    /// 1. Fetches all completed tasks from the database
+    /// 1. Fetches all completed todos from the database
     /// 2. Marks them as incomplete
     /// 3. Saves the changes
     /// 4. Notifies the UI to update
-    func resetAllTasks() {
+    func resetAllTodos() {
         do {
-            // Fetch all completed tasks
-            let completedTasks = try modelContext.fetchCompletedTasks(category: nil)
-            let count = completedTasks.count
+            // Fetch all completed todos
+            let completedTodos = try modelContext.fetchCompletedTodos(category: nil)
+            let count = completedTodos.count
             
             // Mark each as incomplete
-            for task in completedTasks {
-                task.isCompleted = false
+            for todo in completedTodos {
+                todo.isCompleted = false
             }
             
             // Save changes
@@ -148,34 +148,34 @@ class TaskResetManager: ObservableObject {
             // Add a small delay to ensure UI is updated
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 // This notification triggers UI updates
-                NotificationCenter.default.post(name: .tasksResetNotification, object: nil)
+                NotificationCenter.default.post(name: .todosResetNotification, object: nil)
             }
             
-            print("Successfully reset \(count) tasks at \(Date().formatted(date: .abbreviated, time: .standard))")
+            print("Successfully reset \(count) todos at \(Date().formatted(date: .abbreviated, time: .standard))")
         } catch {
-            print("Failed to reset tasks: \(error.localizedDescription)")
+            print("Failed to reset todos: \(error.localizedDescription)")
         }
     }
     
     /// Manually trigger a reset (for testing or debugging)
-    func resetTasksNow() {
-        resetAllTasks()
+    func resetTodosNow() {
+        resetAllTodos()
         scheduleNextReset()
     }
 }
 
-// MARK: - Environment Key for TaskResetManager
+// MARK: - Environment Key for TodoResetManager
 
-/// Define the environment key for accessing the TaskResetManager
-struct ResetTaskManagerKey: EnvironmentKey {
-    static let defaultValue: TaskResetManager? = nil
+/// Define the environment key for accessing the TodoResetManager
+struct ResetTodoManagerKey: EnvironmentKey {
+    static let defaultValue: TodoResetManager? = nil
 }
 
-/// Extend the environment values to provide access to the TaskResetManager
+/// Extend the environment values to provide access to the TodoResetManager
 extension EnvironmentValues {
-    /// Access the task reset manager through the SwiftUI environment
-    var resetTaskManager: TaskResetManager? {
-        get { self[ResetTaskManagerKey.self] }
-        set { self[ResetTaskManagerKey.self] = newValue }
+    /// Access the todo reset manager through the SwiftUI environment
+    var resetTodoManager: TodoResetManager? {
+        get { self[ResetTodoManagerKey.self] }
+        set { self[ResetTodoManagerKey.self] = newValue }
     }
 }

@@ -18,11 +18,11 @@ import UserNotifications
 /// - Showing a different visual appearance for completed vs. incomplete tasks
 /// - Providing a button to toggle the task's completion status
 /// - Creating a visually attractive card with appropriate styling based on task properties
-struct TaskView: View {
+struct TodoView: View {
     // MARK: Properties
 
     /// The task to display, using @Bindable for two-way binding
-    @Bindable var task: Task
+    @Bindable var task: Todo
 
     /// Settings manager for notification preferences
     @EnvironmentObject private var settingsManager: SettingsManager
@@ -156,7 +156,7 @@ struct TaskView: View {
 #Preview("Task Card") {
     let container = TaskMockData.createPreviewContainer()
     let context = ModelContext(container)
-    let task = Task(
+    let task = Todo(
         title: "Morning Meditation",
         order: 1,
         category: .required,
@@ -164,7 +164,7 @@ struct TaskView: View {
     )
     context.insert(task)
 
-    return TaskView(task: task, onToggleComplete: {})
+    return TodoView(task: task, onToggleComplete: {})
         .frame(width: 350)
         .padding()
         .environmentObject(SettingsManager())

@@ -28,7 +28,7 @@ enum TaskCategory: String, Codable, Hashable {
 /// information about tasks that need to be completed, including their title,
 /// order, category, completion status, and creation time.
 @Model
-final class Task {
+final class Todo {
     // MARK: Properties
 
     /// Stable UUID for the task (used for notification identification)

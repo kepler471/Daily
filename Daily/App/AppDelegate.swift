@@ -28,8 +28,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     /// The SwiftData model container for data persistence
     var modelContainer: ModelContainer?
 
-    /// Manager for handling task reset functionality
-    var taskResetManager: TaskResetManager?
+    /// Manager for handling todo reset functionality
+    var todoResetManager: TodoResetManager?
 
     /// Manager for app settings and preferences
     var settingsManager: SettingsManager?
@@ -58,13 +58,27 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         setupNotifications()
     }
 
+    /// Called when the application becomes active
+    /// - Parameter notification: The notification object
+    func applicationDidBecomeActive(_ notification: Notification) {
+        // Refresh the badge count when the app becomes active
+        notificationManager.refreshBadgeCount()
+    }
+
+    /// Called when the application deactivates
+    /// - Parameter notification: The notification object
+    func applicationDidResignActive(_ notification: Notification) {
+        // Refresh the badge count when the app deactivates
+        notificationManager.refreshBadgeCount()
+    }
+
     /// Sets up notification handling and requests permissions
     private func setupNotifications() {
         // Set this class as the notification center delegate
         UNUserNotificationCenter.current().delegate = self
 
         // Request notification permission using async/await pattern
-        SwiftUI.Task {
+        Task {
             do {
                 let (granted, error) = await notificationManager.requestAuthorization()
 
@@ -93,7 +107,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
         // We keep the method signature the same to avoid breaking changes elsewhere
         guard let container = modelContainer,
-              taskResetManager != nil,
+              todoResetManager != nil,
               settingsManager != nil else {
             print("Warning: Required dependencies not available.")
             return
@@ -130,6 +144,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     ) {
         // Always show notifications even when the app is in the foreground
         completionHandler([.banner, .sound, .badge])
+
+        // Ensure badge count is updated after the notification is shown
+        Task { @MainActor in
+            // Small delay to ensure notification is processed
+            try? await Task.sleep(nanoseconds: 500_000_000) // 500ms
+            self.notificationManager.refreshBadgeCount()
+        }
     }
 
     /// Called when the user responds to a notification
@@ -143,7 +164,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         // Forward to the notification manager to handle
-        SwiftUI.Task {
+        Task {
             await notificationManager.userNotificationCenter(center, didReceive: response)
             completionHandler()
         }

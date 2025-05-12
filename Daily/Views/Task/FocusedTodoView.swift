@@ -16,17 +16,17 @@ import SwiftData
 /// - Viewing a task in detail
 /// - Marking the task as complete
 /// - Interacting with the task with visual feedback
-struct FocusedTaskView: View {
+struct FocusedTodoView: View {
     // MARK: Properties
 
     /// Database context for saving task changes
     @Environment(\.modelContext) private var modelContext
 
     /// The specific task to display, or nil to show the top required task
-    var selectedTask: Task?
+    var selectedTask: Todo?
 
     /// Live query for required tasks, sorted by order (used when no specific task is provided)
-    @Query private var requiredTasks: [Task]
+    @Query private var requiredTasks: [Todo]
 
     /// Binding to control the visibility of this view
     @Binding var isPresented: Bool
@@ -43,19 +43,19 @@ struct FocusedTaskView: View {
     /// - Parameters:
     ///   - task: Optional specific task to display
     ///   - isPresented: Binding to control the visibility of the view
-    init(task: Task? = nil, isPresented: Binding<Bool>) {
+    init(task: Todo? = nil, isPresented: Binding<Bool>) {
         self.selectedTask = task
         self._isPresented = isPresented
 
         // Configure sorting to ensure consistent display order
         let sortDescriptors = [
-            SortDescriptor(\Task.order),
-            SortDescriptor(\Task.createdAt)
+            SortDescriptor(\Todo.order),
+            SortDescriptor(\Todo.createdAt)
         ]
 
         // Query to get required tasks that are not completed
         _requiredTasks = Query(
-            filter: Task.Predicates.byCategoryAndCompletion(category: .required, isCompleted: false),
+            filter: Todo.Predicates.byCategoryAndCompletion(category: .required, isCompleted: false),
             sort: sortDescriptors
         )
     }
@@ -63,7 +63,7 @@ struct FocusedTaskView: View {
     // MARK: - Computed Properties
 
     /// Returns the task to display - either the selected task or the top required task
-    private var taskToDisplay: Task? {
+    private var taskToDisplay: Todo? {
         return selectedTask ?? requiredTasks.first
     }
     
@@ -130,7 +130,7 @@ struct FocusedTaskView: View {
     /// - Parameter task: The task to display
     /// - Returns: A SwiftUI view representing the task card
     @ViewBuilder
-    private func focusedTaskCard(for task: Task) -> some View {
+    private func focusedTaskCard(for task: Todo) -> some View {
         VStack(spacing: 20) {
             // MARK: Task Details
             
@@ -225,20 +225,35 @@ struct FocusedTaskView: View {
     
     /// Toggles the completion state of a task and saves the change
     /// - Parameter task: The task to toggle
-    private func toggleTaskCompletion(_ task: Task) {
+    private func toggleTaskCompletion(_ task: Todo) {
         // Toggle task completion state
         task.isCompleted.toggle()
-        
+
         do {
             // Save the changes to the model
             try modelContext.save()
-            
+
             // Add a small delay to allow the UI to update
             // This helps the SwiftData change notifications propagate
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 // This is just to trigger a UI refresh
                 withAnimation {
                     // No need to do anything here - just triggering a refresh
+                }
+
+                // If the task is being completed (not reopened), post notification for animation
+                if task.isCompleted {
+                    // Post a notification to trigger completion animation in TaskStackView
+                    print("📣 FocusedTaskView: Posting taskCompletedExternally notification for task: \(task.title)")
+                    print("📣 FocusedTaskView: Task UUID: \(task.uuid.uuidString)")
+
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        NotificationCenter.default.post(
+                            name: .taskCompletedExternally,
+                            object: nil,
+                            userInfo: ["completedTaskId": task.uuid.uuidString]
+                        )
+                    }
                 }
             }
         } catch {
@@ -250,6 +265,6 @@ struct FocusedTaskView: View {
 // MARK: - Preview
 
 #Preview("Focused Task") {
-    FocusedTaskView(isPresented: .constant(true))
+    FocusedTodoView(isPresented: .constant(true))
         .modelContainer(TaskMockData.createPreviewContainer())
 }

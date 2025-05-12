@@ -1,5 +1,5 @@
 //
-//  TaskStackView.swift
+//  TodoStackView.swift
 //  Daily
 //
 //  Created by Stelios Georgiou on 07/05/2025.
@@ -9,29 +9,29 @@ import SwiftUI
 import SwiftData
 import UserNotifications
 
-// MARK: - TaskStackView
+// MARK: - TodoStackView
 
-/// A view that displays tasks in a visually pleasing, overlapping stack
+/// A view that displays todos in a visually pleasing, overlapping stack
 ///
-/// TaskStackView provides a highly interactive task display with:
+/// TodoStackView provides a highly interactive todo display with:
 /// - Stacked card layout with configurable spacing and scaling
 /// - Hover interactions to fan out cards for easier selection
-/// - Custom animations for task completion and card repositioning
+/// - Custom animations for todo completion and card repositioning
 /// - Support for multiple layout styles through different initialization options
-struct TaskStackView: View {
+struct TodoStackView: View {
     // MARK: - Properties
     
-    /// Database context for saving task changes
+    /// Database context for saving todo changes
     @Environment(\.modelContext) private var modelContext
 
     /// Settings manager for notification preferences
     @EnvironmentObject private var settingsManager: SettingsManager
 
-    /// Query for retrieving tasks from the database
-    @Query private var tasks: [Task]
+    /// Query for retrieving todos from the database
+    @Query private var todos: [Todo]
     
-    /// Currently hovered task index for interactive effects
-    @State private var hoveredTaskIndex: Int? = nil
+    /// Currently hovered todo index for interactive effects
+    @State private var hoveredTodoIndex: Int? = nil
     
     /// Whether the stack is in selection mode (fanned out)
     @State private var isSelectionModeActive: Bool = false
@@ -48,17 +48,17 @@ struct TaskStackView: View {
     /// Scale factor for cards in the stack (1.0 = no scaling)
     var scaleAmount: CGFloat
     
-    /// Optional category filter for the tasks
-    var category: TaskCategory?
+    /// Optional category filter for the todos
+    var category: TodoCategory?
 
-    /// Callback when a task is selected for focused view
-    var onTaskSelected: ((Task) -> Void)? = nil
+    /// Callback when a todo is selected for focused view
+    var onTodoSelected: ((Todo) -> Void)? = nil
 
-    /// Set of tasks that should be visually removed due to completion
-    @State private var tasksToRemove: Set<ObjectIdentifier> = []
+    /// Set of todos that should be visually removed due to completion
+    @State private var todosToRemove: Set<ObjectIdentifier> = []
 
-    /// Store completed tasks temporarily for animation purposes
-    @State private var animatingTasks: [Task] = []
+    /// Store completed todos temporarily for animation purposes
+    @State private var animatingTodos: [Todo] = []
 
     /// Whether the stack is currently animating repositioning
     @State private var isRepositioning: Bool = false
@@ -67,33 +67,33 @@ struct TaskStackView: View {
     
     /// Initialize with a constant vertical offset and optional scale
     /// - Parameters:
-    ///   - category: Optional category to filter tasks by
+    ///   - category: Optional category to filter todos by
     ///   - verticalOffset: Constant spacing between cards in the stack
     ///   - scale: Scale factor for cards in the stack (1.0 = no scaling)
-    ///   - onTaskSelected: Optional callback when a task is selected
-    init(category: TaskCategory? = nil, verticalOffset: CGFloat = 20, scale: CGFloat = 1.0, onTaskSelected: ((Task) -> Void)? = nil) {
+    ///   - onTodoSelected: Optional callback when a todo is selected
+    init(category: TodoCategory? = nil, verticalOffset: CGFloat = 20, scale: CGFloat = 1.0, onTodoSelected: ((Todo) -> Void)? = nil) {
         self.verticalOffset = verticalOffset
         self.offsetByIndex = nil
         self.scaleByIndex = nil
         self.scaleAmount = scale
         self.category = category
-        self.onTaskSelected = onTaskSelected
+        self.onTodoSelected = onTodoSelected
         
-        // Use a combined predicate to get only incomplete tasks for this category
+        // Use a combined predicate to get only incomplete todos for this category
         if let category = category {
-            _tasks = Query(
-                filter: Task.Predicates.byCategoryAndCompletion(category: category, isCompleted: false),
+            _todos = Query(
+                filter: Todo.Predicates.byCategoryAndCompletion(category: category, isCompleted: false),
                 sort: [
-                    SortDescriptor(\Task.order, order: .forward),
-                    SortDescriptor(\Task.createdAt, order: .forward)
+                    SortDescriptor(\Todo.order, order: .forward),
+                    SortDescriptor(\Todo.createdAt, order: .forward)
                 ]
             )
         } else {
-            _tasks = Query(
-                filter: Task.Predicates.byCompletion(isCompleted: false),
+            _todos = Query(
+                filter: Todo.Predicates.byCompletion(isCompleted: false),
                 sort: [
-                    SortDescriptor(\Task.order, order: .forward),
-                    SortDescriptor(\Task.createdAt, order: .forward)
+                    SortDescriptor(\Todo.order, order: .forward),
+                    SortDescriptor(\Todo.createdAt, order: .forward)
                 ]
             )
         }
@@ -101,33 +101,33 @@ struct TaskStackView: View {
     
     /// Initialize with a function mapping index to offset and optional scale
     /// - Parameters:
-    ///   - category: Optional category to filter tasks by
+    ///   - category: Optional category to filter todos by
     ///   - offsetByIndex: Function that calculates vertical offset based on card index
     ///   - scale: Scale factor for cards in the stack (1.0 = no scaling)
-    ///   - onTaskSelected: Optional callback when a task is selected
-    init(category: TaskCategory? = nil, offsetByIndex: @escaping (Int) -> CGFloat, scale: CGFloat = 1.0, onTaskSelected: ((Task) -> Void)? = nil) {
+    ///   - onTodoSelected: Optional callback when a todo is selected
+    init(category: TodoCategory? = nil, offsetByIndex: @escaping (Int) -> CGFloat, scale: CGFloat = 1.0, onTodoSelected: ((Todo) -> Void)? = nil) {
         self.verticalOffset = 0 // Not used in this initialization
         self.offsetByIndex = offsetByIndex
         self.scaleByIndex = nil
         self.scaleAmount = scale
         self.category = category
-        self.onTaskSelected = onTaskSelected
+        self.onTodoSelected = onTodoSelected
         
-        // Use a combined predicate to get only incomplete tasks for this category
+        // Use a combined predicate to get only incomplete todos for this category
         if let category = category {
-            _tasks = Query(
-                filter: Task.Predicates.byCategoryAndCompletion(category: category, isCompleted: false),
+            _todos = Query(
+                filter: Todo.Predicates.byCategoryAndCompletion(category: category, isCompleted: false),
                 sort: [
-                    SortDescriptor(\Task.order, order: .forward),
-                    SortDescriptor(\Task.createdAt, order: .forward)
+                    SortDescriptor(\Todo.order, order: .forward),
+                    SortDescriptor(\Todo.createdAt, order: .forward)
                 ]
             )
         } else {
-            _tasks = Query(
-                filter: Task.Predicates.byCompletion(isCompleted: false),
+            _todos = Query(
+                filter: Todo.Predicates.byCompletion(isCompleted: false),
                 sort: [
-                    SortDescriptor(\Task.order, order: .forward),
-                    SortDescriptor(\Task.createdAt, order: .forward)
+                    SortDescriptor(\Todo.order, order: .forward),
+                    SortDescriptor(\Todo.createdAt, order: .forward)
                 ]
             )
         }
@@ -135,33 +135,33 @@ struct TaskStackView: View {
     
     /// Initialize with functions for both offset and scale
     /// - Parameters:
-    ///   - category: Optional category to filter tasks by
+    ///   - category: Optional category to filter todos by
     ///   - offsetByIndex: Function that calculates vertical offset based on card index
     ///   - scaleByIndex: Function that calculates scale factor based on card index
-    ///   - onTaskSelected: Optional callback when a task is selected
-    init(category: TaskCategory? = .required, offsetByIndex: @escaping (Int) -> CGFloat, scaleByIndex: @escaping (Int) -> CGFloat, onTaskSelected: ((Task) -> Void)? = nil) {
+    ///   - onTodoSelected: Optional callback when a todo is selected
+    init(category: TodoCategory? = .required, offsetByIndex: @escaping (Int) -> CGFloat, scaleByIndex: @escaping (Int) -> CGFloat, onTodoSelected: ((Todo) -> Void)? = nil) {
         self.verticalOffset = 0 // Not used in this initialization
         self.offsetByIndex = offsetByIndex
         self.scaleByIndex = scaleByIndex
         self.scaleAmount = 1.0 // Not used in this initialization
         self.category = category
-        self.onTaskSelected = onTaskSelected
+        self.onTodoSelected = onTodoSelected
         
-        // Use a combined predicate to get only incomplete tasks for this category
+        // Use a combined predicate to get only incomplete todos for this category
         if let category = category {
-            _tasks = Query(
-                filter: Task.Predicates.byCategoryAndCompletion(category: category, isCompleted: false),
+            _todos = Query(
+                filter: Todo.Predicates.byCategoryAndCompletion(category: category, isCompleted: false),
                 sort: [
-                    SortDescriptor(\Task.order, order: .forward),
-                    SortDescriptor(\Task.createdAt, order: .forward)
+                    SortDescriptor(\Todo.order, order: .forward),
+                    SortDescriptor(\Todo.createdAt, order: .forward)
                 ]
             )
         } else {
-            _tasks = Query(
-                filter: Task.Predicates.byCompletion(isCompleted: false),
+            _todos = Query(
+                filter: Todo.Predicates.byCompletion(isCompleted: false),
                 sort: [
-                    SortDescriptor(\Task.order, order: .forward),
-                    SortDescriptor(\Task.createdAt, order: .forward)
+                    SortDescriptor(\Todo.order, order: .forward),
+                    SortDescriptor(\Todo.createdAt, order: .forward)
                 ]
             )
         }
@@ -172,32 +172,32 @@ struct TaskStackView: View {
     var body: some View {
         // Stack layout with cards
         ZStack {
-            // First show regular tasks (filtered to show only incomplete ones)
-            let filteredTasks = tasks.filter { task in
-                return !task.isCompleted
+            // First show regular todos (filtered to show only incomplete ones)
+            let filteredTodos = todos.filter { todo in
+                return !todo.isCompleted
             }
 
-            ForEach(Array(filteredTasks.enumerated()), id: \.element.id) { index, task in
-                // Only show tasks that aren't marked for removal
-                if !tasksToRemove.contains(ObjectIdentifier(task)) {
-                    taskCardView(for: task, at: index)
+            ForEach(Array(filteredTodos.enumerated()), id: \.element.id) { index, todo in
+                // Only show todos that aren't marked for removal
+                if !todosToRemove.contains(ObjectIdentifier(todo)) {
+                    todoCardView(for: todo, at: index)
                         .accessibilityElement(children: .contain)
-                        .accessibilityLabel("\(task.title), task \(index + 1) of \(filteredTasks.count)")
-                        .accessibilityHint("Hover to fan out all tasks, tap to view details, or click complete button")
+                        .accessibilityLabel("\(todo.title), todo \(index + 1) of \(filteredTodos.count)")
+                        .accessibilityHint("Hover to fan out all todos, tap to view details, or click complete button")
                         .onTapGesture {
-                            if let onTaskSelected = onTaskSelected {
-                                onTaskSelected(task)
+                            if let onTodoSelected = onTodoSelected {
+                                onTodoSelected(todo)
                             }
                         }
                 }
             }
 
-            // Then show the animating tasks (ones that are completing)
-            ForEach(animatingTasks, id: \.id) { task in
-                // Use the same position as the original task (stored in task.order)
-                let originalPosition = min(Int(task.order), filteredTasks.count)
+            // Then show the animating todos (ones that are completing)
+            ForEach(animatingTodos, id: \.id) { todo in
+                // Use the same position as the original todo (stored in todo.order)
+                let originalPosition = min(Int(todo.order), filteredTodos.count)
 
-                taskCardView(for: task, at: originalPosition)
+                todoCardView(for: todo, at: originalPosition)
                     .transition(
                         AnyTransition.asymmetric(
                             insertion: .identity, // No insertion animation - we want it to stay in place
@@ -207,81 +207,81 @@ struct TaskStackView: View {
                                 .animation(.easeOut(duration: 1.0))
                         )
                     )
-                    .zIndex(1000) // Keep the animating task on top during animation
+                    .zIndex(1000) // Keep the animating todo on top during animation
             }
         }
         .padding()
         // This animation helps with the overall stack repositioning
-        .animation(isRepositioning ? .spring(response: 0.7, dampingFraction: 0.7) : nil, value: tasks.count)
-        .onChange(of: tasks) { oldValue, newValue in
-            // Reset the removal tracking when tasks change
-            // This ensures we don't accidentally hide new tasks
-            tasksToRemove.removeAll()
+        .animation(isRepositioning ? .spring(response: 0.7, dampingFraction: 0.7) : nil, value: todos.count)
+        .onChange(of: todos) { oldValue, newValue in
+            // Reset the removal tracking when todos change
+            // This ensures we don't accidentally hide new todos
+            todosToRemove.removeAll()
         }
-        // Add another onChange handler specifically for task completion status
-        .onChange(of: tasks.map(\.isCompleted)) { oldValue, newValue in
-            // Clear tasksToRemove when completion status changes from an external source
+        // Add another onChange handler specifically for todo completion status
+        .onChange(of: todos.map(\.isCompleted)) { oldValue, newValue in
+            // Clear todosToRemove when completion status changes from an external source
             if oldValue != newValue {
-                tasksToRemove.removeAll()
+                todosToRemove.removeAll()
             }
         }
-        // Print current tasks for debugging
+        // Print current todos for debugging
         .onAppear {
-            print("📋 TaskStackView for category \(category?.rawValue ?? "all") initialized with \(tasks.count) tasks")
-            for task in tasks {
-                print("  - \(task.title) (UUID: \(task.uuid.uuidString), Completed: \(task.isCompleted))")
+            print("📋 TodoStackView for category \(category?.rawValue ?? "all") initialized with \(todos.count) todos")
+            for todo in todos {
+                print("  - \(todo.title) (UUID: \(todo.uuid.uuidString), Completed: \(todo.isCompleted))")
             }
         }
-        // Listen for task reset notifications
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("TasksResetNotification"))) { _ in
-            // When tasks are reset, clear the removal tracking
+        // Listen for todo reset notifications
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("TodosResetNotification"))) { _ in
+            // When todos are reset, clear the removal tracking
             withAnimation {
-                tasksToRemove.removeAll()
+                todosToRemove.removeAll()
             }
         }
-        // Listen for external task completion notifications
-        .onReceive(NotificationCenter.default.publisher(for: .taskCompletedExternally)) { notification in
-            // Extract the completed task ID and category from the notification
-            print("🔔 TaskStackView for category \(category?.rawValue ?? "all"): Received taskCompletedExternally notification")
+        // Listen for external todo completion notifications
+        .onReceive(NotificationCenter.default.publisher(for: .todoCompletedExternally)) { notification in
+            // Extract the completed todo ID and category from the notification
+            print("🔔 TodoStackView for category \(category?.rawValue ?? "all"): Received todoCompletedExternally notification")
 
-            let completedTaskId = notification.userInfo?["completedTaskId"] as? String
-            let taskCategoryStr = notification.userInfo?["category"] as? String
-            let taskCategory = taskCategoryStr.flatMap { TaskCategory(rawValue: $0) }
+            let completedTodoId = notification.userInfo?["completedTodoId"] as? String
+            let todoCategoryStr = notification.userInfo?["category"] as? String
+            let todoCategory = todoCategoryStr.flatMap { TodoCategory(rawValue: $0) }
 
-            print("🔔 TaskStackView: Notification details - taskId: \(completedTaskId ?? "nil"), category: \(taskCategoryStr ?? "nil")")
+            print("🔔 TodoStackView: Notification details - todoId: \(completedTodoId ?? "nil"), category: \(todoCategoryStr ?? "nil")")
 
             // First check if this is a category-specific notification
-            if let completedTaskId = completedTaskId,
-               let taskCategory = taskCategory {
+            if let completedTodoId = completedTodoId,
+               let todoCategory = todoCategory {
 
-                // Only handle the notification if this stack is for the task's category
-                if taskCategory == category || category == nil {
-                    print("✅ TaskStackView: Handling notification for matching category: \(taskCategory.rawValue)")
+                // Only handle the notification if this stack is for the todo's category
+                if todoCategory == category || category == nil {
+                    print("✅ TodoStackView: Handling notification for matching category: \(todoCategory.rawValue)")
 
-                    // Print current tasks for comparison
-                    print("📋 Current tasks in this stack:")
-                    for task in tasks {
-                        print("  - \(task.title) (UUID: \(task.uuid.uuidString), Completed: \(task.isCompleted))")
+                    // Print current todos for comparison
+                    print("📋 Current todos in this stack:")
+                    for todo in todos {
+                        print("  - \(todo.title) (UUID: \(todo.uuid.uuidString), Completed: \(todo.isCompleted))")
                     }
 
-                    handleExternalTaskCompletion(taskId: completedTaskId)
+                    handleExternalTodoCompletion(todoId: completedTodoId)
                 } else {
-                    print("⚠️ TaskStackView: Ignoring notification for category \(taskCategory.rawValue) (this stack is for \(category?.rawValue ?? "all"))")
+                    print("⚠️ TodoStackView: Ignoring notification for category \(todoCategory.rawValue) (this stack is for \(category?.rawValue ?? "all"))")
                 }
             }
             // Fallback for backward compatibility
-            else if let completedTaskId = completedTaskId {
-                print("🔔 TaskStackView: Handling notification without category info")
+            else if let completedTodoId = completedTodoId {
+                print("🔔 TodoStackView: Handling notification without category info")
 
-                // Print current tasks for comparison
-                print("📋 Current tasks in this stack:")
-                for task in tasks {
-                    print("  - \(task.title) (UUID: \(task.uuid.uuidString), Completed: \(task.isCompleted))")
+                // Print current todos for comparison
+                print("📋 Current todos in this stack:")
+                for todo in todos {
+                    print("  - \(todo.title) (UUID: \(todo.uuid.uuidString), Completed: \(todo.isCompleted))")
                 }
 
-                handleExternalTaskCompletion(taskId: completedTaskId)
+                handleExternalTodoCompletion(todoId: completedTodoId)
             } else {
-                print("❌ TaskStackView: Missing completedTaskId in notification userInfo")
+                print("❌ TodoStackView: Missing completedTodoId in notification userInfo")
                 print("Available keys: \(notification.userInfo?.keys.map { $0 as? String } ?? [])")
             }
         }
@@ -289,12 +289,12 @@ struct TaskStackView: View {
     
     // MARK: - Card View Builder
     
-    /// Creates a task card view with animations and transitions
+    /// Creates a todo card view with animations and transitions
     /// - Parameters:
-    ///   - task: The task to display
-    ///   - index: The index of the task in the stack
-    /// - Returns: A configured TaskCardView with animations and effects
-    private func taskCardView(for task: Task, at index: Int) -> some View {
+    ///   - todo: The todo to display
+    ///   - index: The index of the todo in the stack
+    /// - Returns: A configured TodoCardView with animations and effects
+    private func todoCardView(for todo: Todo, at index: Int) -> some View {
         
         // MARK: - Animation Setup
         
@@ -310,7 +310,7 @@ struct TaskStackView: View {
         let removalTransition = removalStep2
         
         // The complete transition combines both insertion and removal transitions
-        let taskTransition = AnyTransition.asymmetric(
+        let todoTransition = AnyTransition.asymmetric(
             insertion: insertionTransition,
             removal: removalTransition
         )
@@ -320,20 +320,20 @@ struct TaskStackView: View {
             calculateExpandedOffset(for: index) : 
             calculateYOffset(for: index)
             
-        return TaskView(task: task) {
-            // Handle task completion toggle
-            let newCompletionState = !task.isCompleted
+        return TodoView(todo: todo) {
+            // Handle todo completion toggle
+            let newCompletionState = !todo.isCompleted
             
             // Start animation first, then update model
             if newCompletionState {
                 // For completion animation, insert into removal set before updating model
                 // This preserves the animation even if the model refreshes
                 _ = withAnimation(.easeOut(duration: 1.0).delay(0.3)) {
-                    tasksToRemove.insert(ObjectIdentifier(task))
+                    todosToRemove.insert(ObjectIdentifier(todo))
                 }
                 
-                // Prepare for smooth repositioning of other tasks
-                // Delay repositioning slightly to allow the task to start its completion animation first
+                // Prepare for smooth repositioning of other todos
+                // Delay repositioning slightly to allow the todo to start its completion animation first
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                     // Enable repositioning animation
                     withAnimation {
@@ -343,21 +343,21 @@ struct TaskStackView: View {
                     // Delay the actual model update slightly to allow animation to start
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         // Now update the model
-                        task.isCompleted = newCompletionState
+                        todo.isCompleted = newCompletionState
                         
                         // Try to save the changes
                         do {
                             try modelContext.save()
 
-                            // Cancel notification for completed task
-                            SwiftUI.Task {
-                                await task.cancelNotification()
+                            // Cancel notification for completed todo
+                            Task {
+                                await todo.cancelNotification()
                             }
                         } catch {
-                            print("Error saving task completion state: \(error.localizedDescription)")
+                            print("Error saving todo completion state: \(error.localizedDescription)")
                         }
                         
-                        // After the task has been completed and saved, we can reset the repositioning flag
+                        // After the todo has been completed and saved, we can reset the repositioning flag
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                             isRepositioning = false
                         }
@@ -365,21 +365,21 @@ struct TaskStackView: View {
                 }
             } else {
                 // For reopening, update model immediately
-                task.isCompleted = newCompletionState
-                tasksToRemove.remove(ObjectIdentifier(task))
+                todo.isCompleted = newCompletionState
+                todosToRemove.remove(ObjectIdentifier(todo))
 
                 // Try to save the changes
                 do {
                     try modelContext.save()
 
-                    // Reschedule notification for reopened task
-                    if task.scheduledTime != nil {
-                        SwiftUI.Task {
-                            await task.scheduleNotification(settings: settingsManager)
+                    // Reschedule notification for reopened todo
+                    if todo.scheduledTime != nil {
+                        Task {
+                            await todo.scheduleNotification(settings: settingsManager)
                         }
                     }
                 } catch {
-                    print("Error saving task completion state: \(error.localizedDescription)")
+                    print("Error saving todo completion state: \(error.localizedDescription)")
                 }
             }
         }
@@ -387,18 +387,18 @@ struct TaskStackView: View {
         .offset(y: verticalOffset)
         .scaleEffect(calculateScale(for: index))
         .rotation3DEffect(
-            task.isCompleted ? .degrees(10) : .degrees(0),
+            todo.isCompleted ? .degrees(10) : .degrees(0),
             axis: (x: 1.0, y: 0.2, z: 0.0)
         )
         .zIndex(calculateZIndex(for: index))
         .onHover { isHovered in
             handleHover(isHovered: isHovered, at: index)
         }
-        .transition(taskTransition)
+        .transition(todoTransition)
         // Animation for hover effects
-        .animation(.easeOut(duration: 0.2), value: hoveredTaskIndex)
+        .animation(.easeOut(duration: 0.2), value: hoveredTodoIndex)
         // Animation for completion state changes
-        .animation(.easeOut(duration: 0.7), value: task.isCompleted)
+        .animation(.easeOut(duration: 0.7), value: todo.isCompleted)
         // Animation for repositioning
         .animation(isRepositioning ? 
                   .spring(response: 0.6, dampingFraction: 0.7, blendDuration: 0.3) : 
@@ -415,7 +415,7 @@ struct TaskStackView: View {
     private func handleHover(isHovered: Bool, at index: Int) {
         if isHovered {
             // Card is being hovered over
-            hoveredTaskIndex = index
+            hoveredTodoIndex = index
             
             // Activate selection mode when any card is hovered
             if !isSelectionModeActive {
@@ -423,13 +423,13 @@ struct TaskStackView: View {
                     isSelectionModeActive = true
                 }
             }
-        } else if hoveredTaskIndex == index {
+        } else if hoveredTodoIndex == index {
             // Card is no longer being hovered
-            hoveredTaskIndex = nil
+            hoveredTodoIndex = nil
             
             // Keep selection mode active for a shorter time to allow moving to another card
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
-                if hoveredTaskIndex == nil {
+                if hoveredTodoIndex == nil {
                     withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                         isSelectionModeActive = false
                     }
@@ -462,14 +462,14 @@ struct TaskStackView: View {
         // When cards are fanned out in selection mode, apply distance-based scaling
         if isSelectionModeActive {
             // The hovered card remains at full scale
-            if hoveredTaskIndex == index {
+            if hoveredTodoIndex == index {
                 return 1.0
             }
             
             // If no card is hovered, use the middle of the stack as reference
             // For odd-numbered collections, this will be the exact middle
             // For even-numbered collections, it will be just below the middle
-            let referenceIndex = hoveredTaskIndex ?? Int(floor(Double(tasks.count - 1) / 2.0))
+            let referenceIndex = hoveredTodoIndex ?? Int(floor(Double(todos.count - 1) / 2.0))
             
             // Calculate distance from the hovered/reference card
             let distance = abs(index - referenceIndex)
@@ -491,7 +491,7 @@ struct TaskStackView: View {
             // and each subsequent card is scaled down by a factor proportional to scaleAmount
             let baseScale = 1.0
             let scaleFactor = scaleAmount
-            let numberOfCards = CGFloat(tasks.count)
+            let numberOfCards = CGFloat(todos.count)
             
             // No scaling if scale amount is 1.0
             if scaleFactor == 1.0 {
@@ -510,7 +510,7 @@ struct TaskStackView: View {
     /// - Parameter index: The index of the card in the stack
     /// - Returns: The vertical offset to apply in fan-out mode
     private func calculateExpandedOffset(for index: Int) -> CGFloat {
-        let totalCards = tasks.count
+        let totalCards = todos.count
         
         // Fixed spacing between cards in fan-out mode
         let cardSpacing: CGFloat = 70.0
@@ -527,8 +527,8 @@ struct TaskStackView: View {
         let fanHeight = cardSpacing * CGFloat(totalCards - 1)
         
         // Adjust positions to ensure proper overlap and hover detection
-        let middleIndex = Int(floor(Double(tasks.count - 1) / 2.0))
-        let isOddCount = tasks.count % 2 != 0
+        let middleIndex = Int(floor(Double(todos.count - 1) / 2.0))
+        let isOddCount = todos.count % 2 != 0
         
         var basePosition = positionFactor * (fanHeight / 2.0)
         
@@ -544,49 +544,49 @@ struct TaskStackView: View {
         }
         
         // Apply a small offset for the hovered card to make it stand out
-        let hoverBonus: CGFloat = (hoveredTaskIndex == index) ? -10 : 0
+        let hoverBonus: CGFloat = (hoveredTodoIndex == index) ? -10 : 0
         
         return basePosition + hoverBonus
     }
     
     // MARK: - External Completion Handling
 
-    /// Handles a task completion that happened outside the TaskStackView (notification or focused view)
-    /// - Parameter taskId: The UUID string of the completed task
-    private func handleExternalTaskCompletion(taskId: String) {
-        print("🔍 Searching for task with UUID: \(taskId) to animate completion")
+    /// Handles a todo completion that happened outside the TodoStackView (notification or focused view)
+    /// - Parameter todoId: The UUID string of the completed todo
+    private func handleExternalTodoCompletion(todoId: String) {
+        print("🔍 Searching for todo with UUID: \(todoId) to animate completion")
 
-        // Step 1: Try the modelContext directly to find the task, even if it's completed
+        // Step 1: Try the modelContext directly to find the todo, even if it's completed
         do {
-            // Create a fetch descriptor that includes completed tasks
-            let fetchDescriptor = FetchDescriptor<Task>()
+            // Create a fetch descriptor that includes completed todos
+            let fetchDescriptor = FetchDescriptor<Todo>()
 
-            // Fetch all tasks
-            let allTasks = try modelContext.fetch(fetchDescriptor)
+            // Fetch all todos
+            let allTodos = try modelContext.fetch(fetchDescriptor)
 
-            // Find the task with matching UUID
-            if let completedTask = allTasks.first(where: { $0.uuid.uuidString == taskId }) {
-                print("✅ Found task in database: \(completedTask.title)")
+            // Find the todo with matching UUID
+            if let completedTodo = allTodos.first(where: { $0.uuid.uuidString == todoId }) {
+                print("✅ Found todo in database: \(completedTodo.title)")
 
                 // Only animate if it belongs to this category
-                if completedTask.category == category || category == nil {
-                    print("🎬 Starting animation for task: \(completedTask.title)")
+                if completedTodo.category == category || category == nil {
+                    print("🎬 Starting animation for todo: \(completedTodo.title)")
 
-                    // First find if the task is in the current visible tasks array
+                    // First find if the todo is in the current visible todos array
                     // to preserve its original position and avoid the jump effect
-                    let taskIndex = self.tasks.firstIndex(where: { $0.uuid.uuidString == taskId }) ?? 0
-                    print("📊 Original task index: \(taskIndex)")
+                    let todoIndex = self.todos.firstIndex(where: { $0.uuid.uuidString == todoId }) ?? 0
+                    print("📊 Original todo index: \(todoIndex)")
 
-                    // Add to the animating tasks array without animation
+                    // Add to the animating todos array without animation
                     // This will make it appear in place without moving
-                    self.animatingTasks.append(completedTask)
+                    self.animatingTodos.append(completedTodo)
 
                     // Then after a short delay, remove it with animation
-                    // This delay ensures the task appears to stay in place initially
+                    // This delay ensures the todo appears to stay in place initially
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                         withAnimation(.easeOut(duration: 1.0)) {
                             // Remove it from the array (triggers removal animation)
-                            self.animatingTasks.removeAll(where: { $0.id == completedTask.id })
+                            self.animatingTodos.removeAll(where: { $0.id == completedTodo.id })
                         }
 
                         // Enable repositioning animation for the stack
@@ -604,30 +604,30 @@ struct TaskStackView: View {
 
                     return
                 } else {
-                    print("⚠️ Task found but belongs to different category - this stack is for \(category?.rawValue ?? "all categories")")
+                    print("⚠️ Todo found but belongs to different category - this stack is for \(category?.rawValue ?? "all categories")")
                 }
             }
         } catch {
-            print("❌ Error fetching tasks: \(error.localizedDescription)")
+            print("❌ Error fetching todos: \(error.localizedDescription)")
         }
 
         // If we get here, try the regular approach as a fallback
-        print("⚠️ Trying fallback method with task array")
+        print("⚠️ Trying fallback method with todo array")
 
-        // Find the task in our tasks array
-        if let taskIndex = tasks.firstIndex(where: { $0.uuid.uuidString == taskId }) {
-            let task = tasks[taskIndex]
-            print("✅ Found task at index \(taskIndex): \(task.title)")
+        // Find the todo in our todos array
+        if let todoIndex = todos.firstIndex(where: { $0.uuid.uuidString == todoId }) {
+            let todo = todos[todoIndex]
+            print("✅ Found todo at index \(todoIndex): \(todo.title)")
 
-            // Ensure the task isn't already in the removal set
-            if !tasksToRemove.contains(ObjectIdentifier(task)) {
-                print("🎬 Animating external completion for task: \(task.title)")
+            // Ensure the todo isn't already in the removal set
+            if !todosToRemove.contains(ObjectIdentifier(todo)) {
+                print("🎬 Animating external completion for todo: \(todo.title)")
 
                 // Start the completion animation on the main thread
                 DispatchQueue.main.async {
                     withAnimation(.easeOut(duration: 1.0).delay(0.3)) {
-                        print("➕ Adding task to tasksToRemove set")
-                        self.tasksToRemove.insert(ObjectIdentifier(task))
+                        print("➕ Adding todo to todosToRemove set")
+                        self.todosToRemove.insert(ObjectIdentifier(todo))
                     }
 
                     // Enable repositioning animation
@@ -646,11 +646,11 @@ struct TaskStackView: View {
                     }
                 }
             } else {
-                print("⚠️ Task already in removal set, skipping animation")
+                print("⚠️ Todo already in removal set, skipping animation")
             }
         } else {
-            print("❌ Could not find task with ID: \(taskId) in this TaskStackView")
-            print("❓ Is this the correct TaskStackView for this task's category?")
+            print("❌ Could not find todo with ID: \(todoId) in this TodoStackView")
+            print("❓ Is this the correct TodoStackView for this todo's category?")
         }
     }
 
@@ -661,20 +661,20 @@ struct TaskStackView: View {
     /// - Returns: The z-index value to determine visual stacking order
     private func calculateZIndex(for index: Int) -> Double {
         // Default stacking: top card has highest z-index
-        let baseZIndex = Double(tasks.count - index)
+        let baseZIndex = Double(todos.count - index)
         
-        // Standard stacking when not in selection mode or no task is hovered
-        if !isSelectionModeActive || hoveredTaskIndex == nil {
+        // Standard stacking when not in selection mode or no todo is hovered
+        if !isSelectionModeActive || hoveredTodoIndex == nil {
             return baseZIndex
         }
         
-        // When in selection mode with a hovered task
-        if hoveredTaskIndex == index {
-            // Hovered task gets highest z-index
+        // When in selection mode with a hovered todo
+        if hoveredTodoIndex == index {
+            // Hovered todo gets highest z-index
             return 10.0 
         } else {
-            // All other tasks get z-index based on distance from hovered task
-            let distance = abs(index - (hoveredTaskIndex ?? 0))
+            // All other todos get z-index based on distance from hovered todo
+            let distance = abs(index - (hoveredTodoIndex ?? 0))
             return 10.0 - Double(distance)
         }
     }
@@ -684,24 +684,24 @@ struct TaskStackView: View {
 
 #Preview("Scalar") {
     TabView {
-        TaskStackView(
+        TodoStackView(
             category: .required,
             verticalOffset: 20)
             .frame(height: 600)
             .padding()
-            .modelContainer(TaskMockData.createPreviewContainer())
+            .modelContainer(TodoMockData.createPreviewContainer())
             .environmentObject(SettingsManager())
             .tabItem {
                 Label("Required", systemImage: "checklist")
             }
             .tag(0)
 
-        TaskStackView(
+        TodoStackView(
             category: .suggested,
             verticalOffset: 20)
             .frame(height: 600)
             .padding()
-            .modelContainer(TaskMockData.createPreviewContainer())
+            .modelContainer(TodoMockData.createPreviewContainer())
             .environmentObject(SettingsManager())
             .tabItem {
                 Label("Suggested", systemImage: "checklist")
@@ -711,7 +711,7 @@ struct TaskStackView: View {
 }
 
 #Preview("Log") {
-    TaskStackView(
+    TodoStackView(
         category: nil,
         offsetByIndex: { i in
             return CGFloat(60 * pow(0.2 * Double(i), 0.5))
@@ -719,18 +719,18 @@ struct TaskStackView: View {
     )
         .frame(height: 600)
         .padding()
-        .modelContainer(TaskMockData.createPreviewContainer())
+        .modelContainer(TodoMockData.createPreviewContainer())
 }
 
 #Preview("With Scale") {
-    TaskStackView(category: .required, verticalOffset: 20, scale: 0.85)
+    TodoStackView(category: .required, verticalOffset: 20, scale: 0.85)
         .frame(height: 600)
         .padding()
-        .modelContainer(TaskMockData.createPreviewContainer())
+        .modelContainer(TodoMockData.createPreviewContainer())
 }
 
 #Preview("Log with Scale") {
-    TaskStackView(
+    TodoStackView(
         category: .required,
         offsetByIndex: { i in
             return CGFloat(60 * pow(0.2 * Double(i), 0.5))
@@ -742,7 +742,7 @@ struct TaskStackView: View {
     )
     .frame(height: 600)
     .padding()
-    .modelContainer(TaskMockData.createPreviewContainer())
+    .modelContainer(TodoMockData.createPreviewContainer())
 }
 
 #Preview("Hover Effects") {
@@ -756,7 +756,7 @@ struct TaskStackView: View {
             .foregroundColor(.secondary)
             .padding(.bottom)
         
-        TaskStackView(
+        TodoStackView(
             category: .required,
             offsetByIndex: { i in
                 return CGFloat(30 * i)
@@ -766,16 +766,16 @@ struct TaskStackView: View {
         .frame(height: 600)
     }
     .padding()
-    .modelContainer(TaskMockData.createPreviewContainer())
+    .modelContainer(TodoMockData.createPreviewContainer())
 }
 
 #Preview("Interactive") {
-    TaskStackAdjustablePreview()
-        .modelContainer(TaskMockData.createPreviewContainer())
+    TodoStackAdjustablePreview()
+        .modelContainer(TodoMockData.createPreviewContainer())
 }
 
-/// An interactive preview wrapper for TaskStackView that allows real-time adjustment with sliders
-struct TaskStackAdjustablePreview: View {
+/// An interactive preview wrapper for TodoStackView that allows real-time adjustment with sliders
+struct TodoStackAdjustablePreview: View {
     // Slider parameters
     @State private var baseValue: Double = 40
     @State private var exponent: Double = 0.7
@@ -919,17 +919,17 @@ struct TaskStackAdjustablePreview: View {
             
             Divider()
             
-            // TaskStackView with dynamic parameters
+            // TodoStackView with dynamic parameters
             if useScale {
                 if useCustomScale {
-                    TaskStackView(
+                    TodoStackView(
                         category: .required,
                         offsetByIndex: offsetFunction,
                         scaleByIndex: customScaleFunction
                     )
                     .frame(minHeight: 380)
                 } else {
-                    TaskStackView(
+                    TodoStackView(
                         category: .required,
                         offsetByIndex: offsetFunction,
                         scale: CGFloat(scaleValue)
@@ -937,7 +937,7 @@ struct TaskStackAdjustablePreview: View {
                     .frame(minHeight: 380)
                 }
             } else {
-                TaskStackView(
+                TodoStackView(
                     category: .required,
                     offsetByIndex: offsetFunction
                 )
@@ -1001,7 +1001,7 @@ struct TaskStackAdjustablePreview: View {
     
     // Generate the full code representation based on current settings
     private func generateCodeText() -> String {
-        var code = "TaskStackView(\n"
+        var code = "TodoStackView(\n"
         
         // Add category
         code += "    category: .required,\n"

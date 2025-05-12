@@ -1,5 +1,5 @@
 //
-//  CompletedTaskView.swift
+//  CompletedTodoView.swift
 //  Daily
 //
 //  Created by Stelios Georgiou on 07/05/2025.
@@ -8,59 +8,59 @@
 import SwiftUI
 import SwiftData
 
-// MARK: - Completed Task View
+// MARK: - Completed Todo View
 
-/// A fullscreen overlay view that displays all completed tasks
+/// A fullscreen overlay view that displays all completed todos
 ///
-/// CompletedTaskView provides a modal interface for:
-/// - Viewing all completed tasks in a specific category (or all categories)
-/// - Reopening completed tasks when needed
-/// - Showing task details with interactive hover effects
-struct CompletedTaskView: View {
+/// CompletedTodoView provides a modal interface for:
+/// - Viewing all completed todos in a specific category (or all categories)
+/// - Reopening completed todos when needed
+/// - Showing todo details with interactive hover effects
+struct CompletedTodoView: View {
     // MARK: Properties
     
-    /// Database context for saving task changes
+    /// Database context for saving todo changes
     @Environment(\.modelContext) private var modelContext
     
-    /// Live query for completed tasks, sorted by order
-    @Query private var completedTasks: [Task]
+    /// Live query for completed todos, sorted by order
+    @Query private var completedTodos: [Todo]
     
-    /// Optional category filter - if nil, shows all completed tasks
-    let category: TaskCategory?
+    /// Optional category filter - if nil, shows all completed todos
+    let category: TodoCategory?
     
     /// Binding to control the visibility of this view
     @Binding var isPresented: Bool
     
-    /// Tracks the currently hovered task for hover effects
-    @State private var hoveredTaskId: PersistentIdentifier? = nil
+    /// Tracks the currently hovered todo for hover effects
+    @State private var hoveredTodoId: PersistentIdentifier? = nil
     
     // MARK: - Initialization
     
-    /// Creates a new completed tasks view with optional category filtering
+    /// Creates a new completed todos view with optional category filtering
     /// - Parameters:
-    ///   - category: Optional category to filter tasks by
+    ///   - category: Optional category to filter todos by
     ///   - isPresented: Binding to control the visibility of the view
-    init(category: TaskCategory? = nil, isPresented: Binding<Bool>) {
+    init(category: TodoCategory? = nil, isPresented: Binding<Bool>) {
         self.category = category
         self._isPresented = isPresented
         
         // Configure sorting to ensure consistent display order
         let sortDescriptors = [
-            SortDescriptor(\Task.order),
-            SortDescriptor(\Task.createdAt)
+            SortDescriptor(\Todo.order),
+            SortDescriptor(\Todo.createdAt)
         ]
         
         // Set up the appropriate query based on category
         if let category = category {
             // Category-specific query using predefined predicates
-            _completedTasks = Query(
-                filter: Task.Predicates.byCategoryAndCompletion(category: category, isCompleted: true),
+            _completedTodos = Query(
+                filter: Todo.Predicates.byCategoryAndCompletion(category: category, isCompleted: true),
                 sort: sortDescriptors
             )
         } else {
-            // All completed tasks across categories
-            _completedTasks = Query(
-                filter: Task.Predicates.byCompletion(isCompleted: true),
+            // All completed todos across categories
+            _completedTodos = Query(
+                filter: Todo.Predicates.byCompletion(isCompleted: true),
                 sort: sortDescriptors
             )
         }
@@ -72,11 +72,11 @@ struct CompletedTaskView: View {
     private var categoryTitle: String {
         switch category {
         case .required:
-            return "Completed Required Tasks"
+            return "Completed Required Todos"
         case .suggested:
-            return "Completed Suggested Tasks"
+            return "Completed Suggested Todos"
         case nil:
-            return "All Completed Tasks"
+            return "All Completed Todos"
         }
     }
     
@@ -102,26 +102,26 @@ struct CompletedTaskView: View {
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.top, 20)
                 
-                // MARK: Task List
+                // MARK: Todo List
                 
-                if completedTasks.isEmpty {
+                if completedTodos.isEmpty {
                     // Empty state
                     Spacer()
-                    Text("No completed tasks")
+                    Text("No completed todos")
                         .font(.title2)
                         .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity, alignment: .center)
                     Spacer()
                 } else {
-                    // Scrollable task list
+                    // Scrollable todo list
                     ScrollView {
                         VStack(spacing: 10) {
-                            ForEach(completedTasks) { task in
-                                completedTaskCard(for: task)
-                                    .scaleEffect(hoveredTaskId == task.persistentModelID ? 1.05 : 1.0)
-                                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: hoveredTaskId)
+                            ForEach(completedTodos) { todo in
+                                completedTodoCard(for: todo)
+                                    .scaleEffect(hoveredTodoId == todo.persistentModelID ? 1.05 : 1.0)
+                                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: hoveredTodoId)
                                     .onHover { isHovered in
-                                        hoveredTaskId = isHovered ? task.persistentModelID : nil
+                                        hoveredTodoId = isHovered ? todo.persistentModelID : nil
                                     }
                             }
                         }
@@ -139,24 +139,24 @@ struct CompletedTaskView: View {
         )
     }
     
-    // MARK: - Task Card View
+    // MARK: - Todo Card View
     
-    /// Creates a card view for a completed task
-    /// - Parameter task: The completed task to display
-    /// - Returns: A SwiftUI view representing the task card
+    /// Creates a card view for a completed todo
+    /// - Parameter todo: The completed todo to display
+    /// - Returns: A SwiftUI view representing the todo card
     @ViewBuilder
-    private func completedTaskCard(for task: Task) -> some View {
+    private func completedTodoCard(for todo: Todo) -> some View {
         HStack {
-            // MARK: Task Details
+            // MARK: Todo Details
             
-            // Task title and scheduled time (if exists)
+            // Todo title and scheduled time (if exists)
             VStack(alignment: .leading, spacing: 4) {
-                Text(task.title)
+                Text(todo.title)
                     .font(.headline)
                     .foregroundColor(.secondary)
-                    .strikethrough(task.isCompleted)
+                    .strikethrough(todo.isCompleted)
                 
-                if let scheduledTime = task.scheduledTime {
+                if let scheduledTime = todo.scheduledTime {
                     HStack {
                         Image(systemName: "clock")
                             .foregroundColor(.secondary)
@@ -172,21 +172,21 @@ struct CompletedTaskView: View {
             
             // MARK: Category Badge
             
-            Text(task.category == .required ? "Required" : "Suggested")
+            Text(todo.category == .required ? "Required" : "Suggested")
                 .font(.caption)
                 .fontWeight(.medium)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(
                     Capsule()
-                        .fill(task.category == .required ? Color.blue.opacity(0.2) : Color.purple.opacity(0.2))
+                        .fill(todo.category == .required ? Color.blue.opacity(0.2) : Color.purple.opacity(0.2))
                 )
-                .foregroundColor(task.category == .required ? .blue : .purple)
+                .foregroundColor(todo.category == .required ? .blue : .purple)
             
             // MARK: Reopen Button
             
             Button(action: {
-                toggleTaskCompletion(task)
+                toggleTodoCompletion(todo)
             }) {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.uturn.backward.circle")
@@ -202,7 +202,7 @@ struct CompletedTaskView: View {
                         .fill(Color.orange.opacity(0.1))
                 )
             }
-            .accessibilityLabel("Reopen \(task.title)")
+            .accessibilityLabel("Reopen \(todo.title)")
         }
         .padding()
         .background(
@@ -220,11 +220,11 @@ struct CompletedTaskView: View {
     
     // MARK: - Actions
     
-    /// Toggles the completion state of a task and saves the change
-    /// - Parameter task: The task to toggle
-    private func toggleTaskCompletion(_ task: Task) {
-        // Toggle task completion state
-        task.isCompleted.toggle()
+    /// Toggles the completion state of a todo and saves the change
+    /// - Parameter todo: The todo to toggle
+    private func toggleTodoCompletion(_ todo: Todo) {
+        // Toggle todo completion state
+        todo.isCompleted.toggle()
         
         do {
             // Save the changes to the model
@@ -234,20 +234,20 @@ struct CompletedTaskView: View {
             // This helps the SwiftData change notifications propagate
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 // This is just to trigger a UI refresh
-                // The actual task toggling already happened above
+                // The actual todo toggling already happened above
                 withAnimation {
                     // No need to do anything here - just triggering a refresh
                 }
             }
         } catch {
-            print("Error toggling task completion: \(error.localizedDescription)")
+            print("Error toggling todo completion: \(error.localizedDescription)")
         }
     }
 }
 
 // MARK: - Preview
 
-#Preview("Completed Tasks") {
-    CompletedTaskView(isPresented: .constant(true))
-        .modelContainer(TaskMockData.createPreviewContainer())
+#Preview("Completed Todos") {
+    CompletedTodoView(isPresented: .constant(true))
+        .modelContainer(TodoMockData.createPreviewContainer())
 }

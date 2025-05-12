@@ -1,5 +1,5 @@
 //
-//  EditTaskView.swift
+//  EditTodoView.swift
 //  Daily
 //
 //  Created by Stelios Georgiou on 11/05/2025.
@@ -9,31 +9,31 @@ import SwiftUI
 import SwiftData
 import UserNotifications
 
-/// A view that provides the user interface for editing an existing task
-struct EditTaskView: View {
+/// A view that provides the user interface for editing an existing todo
+struct EditTodoView: View {
     // MARK: - Environment and State
 
-    /// The model context for saving task changes
+    /// The model context for saving todo changes
     @Environment(\.modelContext) private var modelContext
 
     /// The settings manager for notification preferences
     @EnvironmentObject private var settingsManager: SettingsManager
 
-    /// The task being edited
-    @Bindable var task: Task
+    /// The todo being edited
+    @Bindable var todo: Todo
     
-    /// The edited title of the task
+    /// The edited title of the todo
     @State private var title: String
     
-    /// The edited category for the task
-    @State private var selectedCategory: TaskCategory
+    /// The edited category for the todo
+    @State private var selectedCategory: TodoCategory
     
     /// Components for the custom time picker
     @State private var selectedHour: Int
     @State private var selectedMinute: Int
     @State private var isAM: Bool
     
-    /// Whether a time is scheduled for this task
+    /// Whether a time is scheduled for this todo
     @State private var hasScheduledTime: Bool
     
     /// Binding to control the visibility of this view
@@ -42,7 +42,7 @@ struct EditTaskView: View {
     /// Focus state for the title text field
     @FocusState private var isTitleFieldFocused: Bool
     
-    /// The scheduled time for the task calculated from picker components
+    /// The scheduled time for the todo calculated from picker components
     private var scheduledTime: Date? {
         guard hasScheduledTime else { return nil }
         
@@ -59,17 +59,17 @@ struct EditTaskView: View {
     
     // MARK: - Initialization
     
-    /// Creates a new edit task view for an existing task
+    /// Creates a new edit todo view for an existing todo
     /// - Parameters:
-    ///   - task: The task to edit
+    ///   - todo: The todo to edit
     ///   - isPresented: Binding to control the visibility of the view
-    init(task: Task, isPresented: Binding<Bool>) {
-        self.task = task
+    init(todo: Todo, isPresented: Binding<Bool>) {
+        self.todo = todo
         self._isPresented = isPresented
         
-        // Initialize state with existing task values
-        _title = State(initialValue: task.title)
-        _selectedCategory = State(initialValue: task.category)
+        // Initialize state with existing todo values
+        _title = State(initialValue: todo.title)
+        _selectedCategory = State(initialValue: todo.category)
         
         // Set default time values
         let now = Date()
@@ -78,11 +78,11 @@ struct EditTaskView: View {
         _selectedMinute = State(initialValue: calendar.component(.minute, from: now))
         _isAM = State(initialValue: calendar.component(.hour, from: now) < 12)
         
-        // Check if the task has a scheduled time
-        if let scheduledTime = task.scheduledTime {
+        // Check if the todo has a scheduled time
+        if let scheduledTime = todo.scheduledTime {
             _hasScheduledTime = State(initialValue: true)
             
-            // Extract time components from the task's scheduled time
+            // Extract time components from the todo's scheduled time
             let hour = calendar.component(.hour, from: scheduledTime)
             let minute = calendar.component(.minute, from: scheduledTime)
             
@@ -116,30 +116,30 @@ struct EditTaskView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     // Title section
-                    Text("Edit Task")
+                    Text("Edit Todo")
                         .font(.largeTitle)
                         .fontWeight(.bold)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.top, 20)
                         .padding(.bottom, 10)
 
-                    // MARK: Task Card
+                    // MARK: Todo Card
 
                     VStack(spacing: 20) {
-                        // MARK: - Task title
+                        // MARK: - Todo title
 
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Title")
                                 .font(.headline)
                                 .foregroundColor(.secondary)
 
-                            TextField("Task name", text: $title)
+                            TextField("Todo name", text: $title)
                                 .font(.system(size: 18, weight: .medium))
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 14)
                                 .background(RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.1)))
                                 .focused($isTitleFieldFocused)
-                                .accessibilityIdentifier("taskTitleField")
+                                .accessibilityIdentifier("todoTitleField")
                         }
 
                         // MARK: - Category selection
@@ -150,14 +150,14 @@ struct EditTaskView: View {
                                 .foregroundColor(.secondary)
 
                             Picker("", selection: $selectedCategory) {
-                                Text("Required").tag(TaskCategory.required)
-                                Text("Suggested").tag(TaskCategory.suggested)
+                                Text("Required").tag(TodoCategory.required)
+                                Text("Suggested").tag(TodoCategory.suggested)
                             }
                             .labelsHidden()
                             .pickerStyle(.segmented)
                             .padding(.vertical, 5)
                             .accessibilityIdentifier("categoryPicker")
-                            .accessibilityLabel("Task Category")
+                            .accessibilityLabel("Todo Category")
                         }
 
                         // MARK: - Time settings
@@ -236,7 +236,7 @@ struct EditTaskView: View {
                         .disabled(title.isEmpty)
                         .buttonStyle(.borderless)
                         .accessibilityIdentifier("saveChangesButton")
-                        .accessibilityHint("Saves task changes")
+                        .accessibilityHint("Saves todo changes")
                     }
                     .padding(30)
                     .background(
@@ -281,59 +281,59 @@ struct EditTaskView: View {
     
     // MARK: - Actions
     
-    /// Saves the changes to the task
+    /// Saves the changes to the todo
     private func saveChanges() {
-        // Update task properties
-        task.title = title
-        task.category = selectedCategory
-        task.scheduledTime = scheduledTime
+        // Update todo properties
+        todo.title = title
+        todo.category = selectedCategory
+        todo.scheduledTime = scheduledTime
         
         do {
             // Save changes to the database
             try modelContext.save()
             
             // Update notification if there's a scheduled time
-            SwiftUI.Task {
-                if task.scheduledTime != nil {
-                    await task.scheduleNotification(settings: settingsManager)
+            Task {
+                if todo.scheduledTime != nil {
+                    await todo.scheduleNotification(settings: settingsManager)
                 } else {
-                    await task.cancelNotification()
+                    await todo.cancelNotification()
                 }
             }
         } catch {
-            print("Error saving task changes: \(error.localizedDescription)")
+            print("Error saving todo changes: \(error.localizedDescription)")
         }
     }
 }
 
 // MARK: - Previews
 
-#Preview("Edit Task") {
-    let container = TaskMockData.createPreviewContainer()
+#Preview("Edit Todo") {
+    let container = TodoMockData.createPreviewContainer()
     let context = ModelContext(container)
-    let task = Task(
+    let todo = Todo(
         title: "Morning Meditation",
         order: 1,
         category: .required,
         scheduledTime: Calendar.current.date(bySettingHour: 7, minute: 30, second: 0, of: Date())
     )
-    context.insert(task)
+    context.insert(todo)
     
-    return EditTaskView(task: task, isPresented: .constant(true))
+    return EditTodoView(todo: todo, isPresented: .constant(true))
         .environmentObject(SettingsManager())
 }
 
-#Preview("Edit Task - No Time") {
-    let container = TaskMockData.createPreviewContainer()
+#Preview("Edit Todo - No Time") {
+    let container = TodoMockData.createPreviewContainer()
     let context = ModelContext(container)
-    let task = Task(
+    let todo = Todo(
         title: "Read a book",
         order: 2,
         category: .suggested,
         scheduledTime: nil
     )
-    context.insert(task)
+    context.insert(todo)
     
-    return EditTaskView(task: task, isPresented: .constant(true))
+    return EditTodoView(todo: todo, isPresented: .constant(true))
         .environmentObject(SettingsManager())
 }

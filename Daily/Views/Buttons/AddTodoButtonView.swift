@@ -1,5 +1,5 @@
 //
-//  AddTaskView.swift
+//  AddTodoView.swift
 //  Daily
 //
 //  Created by Stelios Georgiou on 06/05/2025.
@@ -9,12 +9,12 @@ import SwiftUI
 import SwiftData
 import UserNotifications
 
-/// A button view that triggers the task creation overlay
-struct AddTaskButtonView: View {
+/// A button view that triggers the todo creation overlay
+struct AddTodoButtonView: View {
     // MARK: - Properties
 
-    /// Binding to control the presentation of the add task overlay
-    @Binding var showingAddTask: Bool
+    /// Binding to control the presentation of the add todo overlay
+    @Binding var showingAddTodo: Bool
 
     /// The foreground color of the plus icon (defaults to a darker secondary color for better contrast)
     var foregroundColor: Color = .secondary.opacity(0.8)
@@ -34,9 +34,9 @@ struct AddTaskButtonView: View {
     // MARK: - Body
 
     var body: some View {
-        // Add task button
+        // Add todo button
         Button {
-            showingAddTask = true
+            showingAddTodo = true
         } label: {
             HStack {
                 Spacer()
@@ -56,16 +56,16 @@ struct AddTaskButtonView: View {
         .buttonStyle(.plain)
         .contentShape(Capsule())
         .focusable(false)
-        .accessibilityLabel("Add new task")
+        .accessibilityLabel("Add new todo")
     }
 }
 
 // MARK: - View Extension
 
 extension View {
-    /// Adds an add task button as an overlay in the top-right corner
+    /// Adds an add todo button as an overlay in the top-right corner
     /// - Parameters:
-    ///   - isPresented: Binding to control the presentation of the add task view
+    ///   - isPresented: Binding to control the presentation of the add todo view
     ///   - foregroundColor: The foreground color of the plus icon (defaults to secondary color)
     ///   - backgroundColor: The background color of the button (defaults to light gray)
     ///   - width: The width of the pill button (defaults to 100)
@@ -73,8 +73,8 @@ extension View {
     ///   - iconSize: The font size for the plus icon (defaults to 24)
     ///   - topPadding: Top padding value (defaults to 16)
     ///   - trailingPadding: Trailing padding value (defaults to 16)
-    /// - Returns: A view with the add task button overlay
-    func withAddTaskButton(
+    /// - Returns: A view with the add todo button overlay
+    func withAddTodoButton(
         isPresented: Binding<Bool>,
         foregroundColor: Color = .secondary.opacity(0.8),
         backgroundColor: Color = Color.gray.opacity(0.95),
@@ -85,8 +85,8 @@ extension View {
         trailingPadding: CGFloat = 16
     ) -> some View {
         self.overlay(
-            AddTaskButtonView(
-                showingAddTask: isPresented,
+            AddTodoButtonView(
+                showingAddTodo: isPresented,
                 foregroundColor: foregroundColor,
                 backgroundColor: backgroundColor,
                 width: width,
@@ -101,18 +101,18 @@ extension View {
 }
 
 // MARK: - Previews
-#Preview("Add Task Button") {
+#Preview("Add Todo Button") {
     struct PreviewWrapper: View {
-        @State private var showingAddTask = false
+        @State private var showingAddTodo = false
 
         var body: some View {
             VStack(spacing: 20) {
                 // Default button
-                AddTaskButtonView(showingAddTask: $showingAddTask)
+                AddTodoButtonView(showingAddTodo: $showingAddTodo)
 
                 // Custom colors and size
-                AddTaskButtonView(
-                    showingAddTask: $showingAddTask,
+                AddTodoButtonView(
+                    showingAddTodo: $showingAddTodo,
                     foregroundColor: .blue,
                     backgroundColor: Color.blue.opacity(0.1),
                     width: 150,
@@ -129,7 +129,7 @@ extension View {
                         Text("Context example")
                             .padding()
 
-                        AddTaskButtonView(showingAddTask: $showingAddTask)
+                        AddTodoButtonView(showingAddTodo: $showingAddTodo)
                     }
                     .frame(width: 300, height: 200)
                     .background(Color.white)
@@ -143,9 +143,9 @@ extension View {
     return PreviewWrapper()
 }
 
-#Preview("With Add Task Button Extension") {
+#Preview("With Add Todo Button Extension") {
     struct PreviewWrapper: View {
-        @State private var showingAddTask = false
+        @State private var showingAddTodo = false
 
         var body: some View {
             ZStack {
@@ -153,13 +153,13 @@ extension View {
                     .edgesIgnoringSafeArea(.all)
 
                 VStack {
-                    Text("Content with add task button")
+                    Text("Content with add todo button")
                         .padding()
                 }
                 .frame(width: 300, height: 200)
                 .background(Color.white)
                 .cornerRadius(12)
-                .withAddTaskButton(isPresented: $showingAddTask)
+                .withAddTodoButton(isPresented: $showingAddTodo)
             }
         }
     }
@@ -169,7 +169,7 @@ extension View {
 
 #Preview("Dark Mode") {
     struct PreviewWrapper: View {
-        @State private var showingAddTask = false
+        @State private var showingAddTodo = false
 
         var body: some View {
             VStack(spacing: 20) {
@@ -177,11 +177,11 @@ extension View {
                     .font(.headline)
 
                 // Default button
-                AddTaskButtonView(showingAddTask: $showingAddTask)
+                AddTodoButtonView(showingAddTodo: $showingAddTodo)
 
                 // Custom colors
-                AddTaskButtonView(
-                    showingAddTask: $showingAddTask,
+                AddTodoButtonView(
+                    showingAddTodo: $showingAddTodo,
                     foregroundColor: .primary,
                     backgroundColor: Color.white.opacity(0.2)
                 )
@@ -196,7 +196,7 @@ extension View {
                             .foregroundColor(.white)
                             .padding()
 
-                        AddTaskButtonView(showingAddTask: $showingAddTask)
+                        AddTodoButtonView(showingAddTodo: $showingAddTodo)
                     }
                     .frame(width: 300, height: 200)
                     .background(Color.gray.opacity(0.2))
