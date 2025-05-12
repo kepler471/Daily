@@ -61,8 +61,27 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     /// Called when the application becomes active
     /// - Parameter notification: The notification object
     func applicationDidBecomeActive(_ notification: Notification) {
-        // Refresh the badge count when the app becomes active
-        notificationManager.refreshBadgeCount()
+        // When app becomes active, synchronize notifications with database
+        Task {
+            // Get all todos from the database
+            if let container = modelContainer {
+                let context = ModelContext(container)
+                do {
+                    // Fetch all todos from the database
+                    let todos = try context.fetchTodos()
+
+                    // Synchronize notifications with the database
+                    await notificationManager.synchronizeNotificationsWithDatabase(todos: todos)
+                } catch {
+                    print("Error fetching todos for notification sync: \(error)")
+                    // If we can't fetch todos, just refresh the badge count
+                    notificationManager.refreshBadgeCount()
+                }
+            } else {
+                // If model container isn't available, just refresh the badge
+                notificationManager.refreshBadgeCount()
+            }
+        }
     }
 
     /// Called when the application deactivates

@@ -341,6 +341,43 @@ class NotificationManager: NSObject, ObservableObject {
         refreshBadgeCount()
     }
 
+    /// Synchronizes notifications with the database, removing any orphaned notifications
+    /// - Parameter todos: All current todos in the database
+    @MainActor
+    func synchronizeNotificationsWithDatabase(todos: [Daily.Todo]) async {
+        // Get all delivered notifications
+        let deliveredNotifications = await withCheckedContinuation { continuation in
+            notificationCenter.getDeliveredNotifications { notifications in
+                continuation.resume(returning: notifications)
+            }
+        }
+
+        // Create a set of valid todo IDs for quick lookup
+        let validTodoIds = Set(todos.map { $0.uuid.uuidString })
+
+        // Find orphaned notifications (those whose todoId doesn't exist in the database)
+        var orphanedIdentifiers: [String] = []
+
+        for notification in deliveredNotifications {
+            // Extract the todo ID from the notification
+            if let todoId = notification.request.content.userInfo["todoId"] as? String {
+                // If this ID is not in our valid todos set, it's orphaned
+                if !validTodoIds.contains(todoId) {
+                    orphanedIdentifiers.append(notification.request.identifier)
+                }
+            }
+        }
+
+        // Remove orphaned notifications if any were found
+        if !orphanedIdentifiers.isEmpty {
+            print("Removing \(orphanedIdentifiers.count) orphaned notifications")
+            notificationCenter.removeDeliveredNotifications(withIdentifiers: orphanedIdentifiers)
+
+            // Refresh the badge count after cleaning up
+            refreshBadgeCount()
+        }
+    }
+
     // MARK: - Badge Management
 
     /// Refreshes the badge count based on delivered notifications
