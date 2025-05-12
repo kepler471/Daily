@@ -24,8 +24,7 @@ struct iOSMainView: View {
     /// The SwiftData model context for database operations
     @Environment(\.modelContext) private var modelContext
     
-    /// Access to the system settings API
-    @Environment(\.openSettings) private var openSettings
+    // iOS doesn't support openSettings environment value, so we'll handle settings differently
     
     /// Whether the add todo sheet is being displayed
     @State private var showingAddTodo = false
@@ -338,7 +337,7 @@ struct iOSMainView: View {
                 .tabItem {
                     Label("Required", systemImage: "exclamationmark.circle")
                 }
-                .badge(requiredTodoCount > 0 ? requiredTodoCount : nil)
+                .badge(requiredTodoCount > 0 ? "\(requiredTodoCount)" : "")
                 .tag(0)
                 
                 // MARK: Suggested Todos Tab
@@ -377,7 +376,7 @@ struct iOSMainView: View {
                 .tabItem {
                     Label("Suggested", systemImage: "lightbulb")
                 }
-                .badge(suggestedTodoCount > 0 ? suggestedTodoCount : nil)
+                .badge(suggestedTodoCount > 0 ? "\(suggestedTodoCount)" : "")
                 .tag(1)
                 
                 // MARK: Settings Tab

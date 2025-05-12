@@ -24,8 +24,10 @@ struct MainView: View {
     /// The SwiftData model context for database operations
     @Environment(\.modelContext) private var modelContext
 
-    /// Access to the system settings API
+#if os(macOS)
+    /// Access to the system settings API (macOS only)
     @Environment(\.openSettings) private var openSettings
+#endif
 
     /// Whether the add todo sheet is being displayed
     @State private var showingAddTodo = false
@@ -198,7 +200,8 @@ struct MainView: View {
             self.resetTodoManager.resetAllTodos()
         }
 
-        // Open settings notification
+#if os(macOS)
+        // Open settings notification (macOS only)
         NotificationCenter.default.addObserver(
             forName: .openSettingsWithLink,
             object: nil,
@@ -206,6 +209,7 @@ struct MainView: View {
         ) { _ in
             self.openSettings()
         }
+#endif
 
         // Add notification for showing focused todo view
         NotificationCenter.default.addObserver(

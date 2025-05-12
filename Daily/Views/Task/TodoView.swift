@@ -87,33 +87,58 @@ struct TodoView: View {
     // MARK: - UI Components
     
     /// Background for the card that changes based on todo completion status
+    @ViewBuilder
     private var cardBackground: some View {
-        Group {
-            if todo.isCompleted {
-                // Completed todo style - faded with gray border
-                Color(.windowBackgroundColor).opacity(0.8)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                    )
-            } else {
-                // Active todo style - gradient border based on category
-                Color(.windowBackgroundColor)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(
-                                LinearGradient(
-                                    colors: [
-                                        todo.category == .required ? .blue.opacity(0.5) : .purple.opacity(0.5),
-                                        todo.category == .required ? .teal.opacity(0.3) : .pink.opacity(0.3)
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 2
-                            )
-                    )
-            }
+        if todo.isCompleted {
+            // Completed todo style - faded with gray border
+            #if os(macOS)
+            Color(.windowBackgroundColor).opacity(0.8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                )
+            #else
+            Color(.systemBackground).opacity(0.8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                )
+            #endif
+        } else {
+            // Active todo style - gradient border based on category
+            #if os(macOS)
+            Color(.windowBackgroundColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    todo.category == .required ? .blue.opacity(0.5) : .purple.opacity(0.5),
+                                    todo.category == .required ? .teal.opacity(0.3) : .pink.opacity(0.3)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 2
+                        )
+                )
+            #else
+            Color(.systemBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    todo.category == .required ? .blue.opacity(0.5) : .purple.opacity(0.5),
+                                    todo.category == .required ? .teal.opacity(0.3) : .pink.opacity(0.3)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 2
+                        )
+                )
+            #endif
         }
     }
     

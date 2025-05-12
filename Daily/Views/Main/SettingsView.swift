@@ -44,12 +44,14 @@ struct SettingsView: View {
             
             Section(header: Text("General")) {
                 HStack {
+                    #if os(macOS)
                     Toggle("Launch at Login", isOn: $settingsManager.launchAtLogin)
                         .toggleStyle(.switch)
                         .accessibilityIdentifier("launchAtLoginToggle")
-                    
+
                     Spacer()
-                    
+                    #endif
+
                     Button(action: {
                         // Show SwiftUI explanation popup
                         showingLaunchExplanation = true
@@ -226,6 +228,7 @@ struct SettingsView: View {
                 showingLoginItemsInstructions = true
             }
         }
+        #if os(macOS)
         .alert("Launch at Login", isPresented: $showingLoginItemsInstructions) {
             Button("Open Login Items") {
                 // Open Login Items preferences
@@ -236,6 +239,7 @@ struct SettingsView: View {
         } message: {
             Text("To enable 'Launch at Login', open System Settings, go to 'General > Login Items', and add Daily to the list of applications.")
         }
+        #endif
     }
     
     // MARK: - Helper Methods

@@ -376,7 +376,7 @@ struct TodoScrollView: View {
 #Preview("Empty State") {
     TodoScrollView(category: .required)
         .environmentObject(SettingsManager())
-        .modelContainer(ModelContainer(for: Todo.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+        .modelContainer(try! ModelContainer(for: Todo.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
 }
 
 #endif
