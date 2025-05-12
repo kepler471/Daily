@@ -242,7 +242,7 @@ struct TaskStackView: View {
             calculateExpandedOffset(for: index) : 
             calculateYOffset(for: index)
             
-        return TaskCardView(task: task) {
+        return TaskView(task: task) {
             // Handle task completion toggle
             let newCompletionState = !task.isCompleted
             

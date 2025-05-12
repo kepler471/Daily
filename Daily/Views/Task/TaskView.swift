@@ -18,7 +18,7 @@ import UserNotifications
 /// - Showing a different visual appearance for completed vs. incomplete tasks
 /// - Providing a button to toggle the task's completion status
 /// - Creating a visually attractive card with appropriate styling based on task properties
-struct TaskCardView: View {
+struct TaskView: View {
     // MARK: Properties
 
     /// The task to display, using @Bindable for two-way binding
@@ -164,7 +164,7 @@ struct TaskCardView: View {
     )
     context.insert(task)
 
-    return TaskCardView(task: task, onToggleComplete: {})
+    return TaskView(task: task, onToggleComplete: {})
         .frame(width: 350)
         .padding()
         .environmentObject(SettingsManager())
