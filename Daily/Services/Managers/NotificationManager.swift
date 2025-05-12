@@ -251,10 +251,7 @@ class NotificationManager: NSObject, ObservableObject {
         content.sound = UNNotificationSound(named: UNNotificationSoundName(rawValue: "Funk.aiff"))
         content.categoryIdentifier = Self.todoCategoryIdentifier
 
-        // Add badge and subtitle to make it more noticeable
-        content.badge = NSNumber(value: 1)
-        print("📣 Setting notification badge value to 1")
-
+        // Add subtitle to make it more noticeable (we'll manage badges separately)
         if #available(macOS 12.0, *) {
             // Add subtitle for more context if available
             content.subtitle = "Time to complete: \(todo.scheduledTime?.formatted(date: .omitted, time: .shortened) ?? "now")"
@@ -294,6 +291,9 @@ class NotificationManager: NSObject, ObservableObject {
         do {
             try await notificationCenter.add(request)
             print("Scheduled notification for todo: \(todo.title)")
+
+            // Update the badge count based on all delivered notifications
+            refreshBadgeCount()
         } catch {
             print("Error scheduling notification: \(error.localizedDescription)")
         }
@@ -344,17 +344,27 @@ class NotificationManager: NSObject, ObservableObject {
     // MARK: - Badge Management
 
     /// Refreshes the badge count based on delivered notifications
+    /// This is the central function for badge management - all badge updates should go through here
     @MainActor
     func refreshBadgeCount() {
         notificationCenter.getDeliveredNotifications { notifications in
             Task { @MainActor in
-                // Count only active notifications (not for completed todos)
+                // Count active notifications
                 let count = notifications.count
                 print("Badge refresh: Found \(count) delivered notifications")
 
-                // Update the app's dock tile badge
+                // Set or clear the badge based on notification count
                 NSApplication.shared.dockTile.showsApplicationBadge = true
-                NSApplication.shared.dockTile.badgeLabel = count == 0 ? nil : "\(count)"
+
+                if count > 0 {
+                    // Set badge to the exact number of delivered notifications
+                    NSApplication.shared.dockTile.badgeLabel = "\(count)"
+                } else {
+                    // Remove badge when there are no notifications
+                    NSApplication.shared.dockTile.badgeLabel = nil
+                }
+
+                // Ensure the Dock tile is updated
                 NSApplication.shared.dockTile.display()
             }
         }
