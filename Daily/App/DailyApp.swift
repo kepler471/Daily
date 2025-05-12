@@ -34,11 +34,11 @@ struct DailyApp: App {
     @StateObject private var settingsManager = SettingsManager()
 
     #if os(macOS)
-    /// The AppDelegate that handles AppKit integration for macOS
+    /// The AppDelegate that handles platform integration
     @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
     #elseif os(iOS)
-    /// The UIApplicationDelegate for iOS
-    @UIApplicationDelegateAdaptor private var appDelegate: iOSAppDelegate
+    /// The AppDelegate that handles platform integration
+    @UIApplicationDelegateAdaptor private var appDelegate: AppDelegate
     #endif
 
     // MARK: - SwiftData Setup
@@ -97,11 +97,11 @@ struct DailyApp: App {
         _todoResetManager = StateObject(wrappedValue: manager)
 
         #if os(macOS)
-        // Initialize the macOS app delegate
+        // Initialize the app delegate for macOS
         _appDelegate = NSApplicationDelegateAdaptor(AppDelegate.self)
         #elseif os(iOS)
-        // Initialize the iOS app delegate
-        _appDelegate = UIApplicationDelegateAdaptor(iOSAppDelegate.self)
+        // Initialize the app delegate for iOS
+        _appDelegate = UIApplicationDelegateAdaptor(AppDelegate.self)
         #endif
     }
 
@@ -112,21 +112,15 @@ struct DailyApp: App {
     /// This method passes the required dependencies to the appropriate AppDelegate
     /// and sets up the application context based on platform
     func onAppear() {
-        #if os(macOS)
-        // macOS-specific setup
+        // Common setup for all platforms
         appDelegate.modelContainer = sharedModelContainer
         appDelegate.todoResetManager = todoResetManager
         appDelegate.settingsManager = settingsManager
 
-        // Configure the popover with the model context after we've passed the dependencies
+        // Platform-specific context setup
+        #if os(macOS)
         appDelegate.setupPopoverWithContext()
         #elseif os(iOS)
-        // iOS-specific setup
-        appDelegate.modelContainer = sharedModelContainer
-        appDelegate.todoResetManager = todoResetManager
-        appDelegate.settingsManager = settingsManager
-
-        // iOS-specific additional setup if needed
         appDelegate.setupWithContext()
         #endif
     }

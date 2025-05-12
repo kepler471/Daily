@@ -9,42 +9,51 @@ import SwiftUI
 import SwiftData
 import UserNotifications
 
+// MARK: - Cross-Platform App Delegate
+
+/// AppDelegate to handle platform integration for app functionality
+///
+/// This AppDelegate is responsible for:
+/// - Configuring the application for the platform
+/// - Managing application lifecycle events
+/// - Coordinating platform-specific functionality
+/// - Setting up and handling notifications
 #if os(macOS)
 import AppKit
 
-// MARK: - App Delegate
-
-/// AppDelegate to handle the AppKit integration for the window app functionality
-///
-/// This AppDelegate is responsible for:
-/// - Configuring the application as a regular windowed app
-/// - Coordinating between AppKit and SwiftUI components
-/// - Setting up keyboard shortcuts
-/// - Managing notification permissions and handling
 class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     // MARK: Properties
 
     /// The application menu manager that handles the app menus
     private var appMenuManager = AppMenuManager()
-
-    /// The SwiftData model container for data persistence
-    var modelContainer: ModelContainer?
-
-    /// Manager for handling todo reset functionality
-    var todoResetManager: TodoResetManager?
-
-    /// Manager for app settings and preferences
-    var settingsManager: SettingsManager?
-
+    
     /// Manager for handling keyboard shortcuts
     private var keyboardShortcutManager = KeyboardShortcutManager()
+    
+#elseif os(iOS)
+import UIKit
 
+class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+#endif
+
+    // MARK: - Common Properties
+    
+    /// The SwiftData model container for data persistence
+    var modelContainer: ModelContainer?
+    
+    /// Manager for handling todo reset functionality
+    var todoResetManager: TodoResetManager?
+    
+    /// Manager for app settings and preferences
+    var settingsManager: SettingsManager?
+    
     /// Manager for handling notifications
     private var notificationManager = NotificationManager.shared
+    
+    // MARK: - Platform-Specific Application Lifecycle
 
-    // MARK: - Application Lifecycle
-
-    /// Called when the application has finished launching
+    #if os(macOS)
+    /// Called when the application has finished launching (macOS)
     /// - Parameter notification: The notification object
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Configure the application as a regular windowed app
@@ -56,13 +65,89 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         // Start monitoring for keyboard shortcuts
         keyboardShortcutManager.startMonitoring()
 
-        // Set up notification handling and request permissions
+        // Set up notification handling
+        UNUserNotificationCenter.current().delegate = self
         setupNotifications()
     }
 
-    /// Called when the application becomes active
+    /// Called when the application is about to terminate (macOS)
+    /// - Parameter notification: The notification object
+    func applicationWillTerminate(_ notification: Notification) {
+        // Stop keyboard shortcut monitoring when the app terminates
+        keyboardShortcutManager.stopMonitoring()
+    }
+    
+    #elseif os(iOS)
+    /// Called when the application finishes launching (iOS)
+    /// - Parameters:
+    ///   - application: The singleton UIApplication instance
+    ///   - launchOptions: A dictionary indicating the reason the app was launched
+    /// - Returns: True if the app should continue to finish launching
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        // Set up UNUserNotificationCenter delegate
+        UNUserNotificationCenter.current().delegate = self
+        
+        // Request notification permissions
+        setupNotifications()
+        
+        return true
+    }
+    
+    /// Called when a new scene session is being created (iOS)
+    /// - Parameters:
+    ///   - application: The singleton UIApplication instance
+    ///   - connectingSceneSession: The session being created
+    ///   - options: Options for configuring the scene
+    /// - Returns: The scene configuration object
+    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        // Create a default scene configuration
+        let sceneConfig = UISceneConfiguration(name: "Default", sessionRole: connectingSceneSession.role)
+        
+        // Set the delegate class
+        sceneConfig.delegateClass = iOSSceneDelegate.self
+        
+        return sceneConfig
+    }
+    
+    /// Called when the application is about to enter the background (iOS)
+    /// - Parameter application: The singleton UIApplication instance
+    @MainActor
+    func applicationDidEnterBackground(_ application: UIApplication) {
+        // Refresh badge count when app enters background
+        Task {
+            await notificationManager.refreshBadgeCount()
+        }
+    }
+    #endif
+
+    // MARK: - Common Application Lifecycle Methods
+
+    #if os(macOS)
+    /// Called when the application becomes active (macOS)
     /// - Parameter notification: The notification object
     func applicationDidBecomeActive(_ notification: Notification) {
+        syncNotificationsWithDatabase()
+    }
+    
+    /// Called when the application deactivates (macOS)
+    /// - Parameter notification: The notification object
+    func applicationDidResignActive(_ notification: Notification) {
+        // Refresh the badge count when the app deactivates
+        notificationManager.refreshBadgeCount()
+    }
+    #elseif os(iOS)
+    /// Called when the application becomes active (iOS)
+    /// - Parameter application: The singleton UIApplication instance
+    @MainActor
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        syncNotificationsWithDatabase()
+    }
+    #endif
+    
+    // MARK: - Common Functionality
+    
+    /// Synchronizes notifications with the database
+    private func syncNotificationsWithDatabase() {
         // When app becomes active, synchronize notifications with database
         Task {
             // Get all todos from the database
@@ -71,99 +156,80 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
                 do {
                     // Fetch all todos from the database
                     let todos = try context.fetchTodos()
-
+                    
                     // Synchronize notifications with the database
                     await notificationManager.synchronizeNotificationsWithDatabase(todos: todos)
                 } catch {
                     print("Error fetching todos for notification sync: \(error)")
                     // If we can't fetch todos, just refresh the badge count
+                    #if os(macOS)
                     notificationManager.refreshBadgeCount()
+                    #elseif os(iOS)
+                    await notificationManager.refreshBadgeCount()
+                    #endif
                 }
             } else {
                 // If model container isn't available, just refresh the badge
+                #if os(macOS)
                 notificationManager.refreshBadgeCount()
+                #elseif os(iOS)
+                await notificationManager.refreshBadgeCount()
+                #endif
             }
         }
     }
-
-    /// Called when the application deactivates
-    /// - Parameter notification: The notification object
-    func applicationDidResignActive(_ notification: Notification) {
-        // Refresh the badge count when the app deactivates
-        notificationManager.refreshBadgeCount()
-    }
-
+    
     /// Sets up notification handling and requests permissions
     private func setupNotifications() {
-        // Set this class as the notification center delegate
-        UNUserNotificationCenter.current().delegate = self
-
         // Request notification permission using async/await pattern
         Task {
-            do {
-                let (granted, error) = await notificationManager.requestAuthorization()
-
-                if let error = error {
-                    print("Error requesting notification permissions: \(error.localizedDescription)")
-                }
-
-                if granted {
-                    print("Notification permission granted")
-                } else {
-                    print("Notification permission denied")
-                }
+            let (granted, error) = await notificationManager.requestAuthorization()
+            
+            if let error = error {
+                print("Error requesting notification permissions: \(error.localizedDescription)")
+            }
+            
+            if granted {
+                print("Notification permission granted")
+            } else {
+                print("Notification permission denied")
             }
         }
     }
-
-    // MARK: - Window Setup
-
-    /// Configures the application with the necessary data context and dependencies
-    ///
-    /// This method is called after the model container and managers
-    /// are passed from DailyApp to the AppDelegate.
+    
+    /// Sets up the application context and dependencies
+    #if os(macOS)
     func setupPopoverWithContext() {
-        // This method is retained for compatibility but doesn't need to configure a popover anymore
-        // since we're using a regular window now
-
-        // We keep the method signature the same to avoid breaking changes elsewhere
-        guard let container = modelContainer,
-              todoResetManager != nil,
-              settingsManager != nil else {
-            print("Warning: Required dependencies not available.")
+    #elseif os(iOS)
+    func setupWithContext() {
+    #endif
+        // Set up the model context for the notification manager
+        guard let container = modelContainer else {
+            print("Warning: ModelContainer not available.")
             return
         }
-
-        // Set up the model context for the notification manager
+        
+        // Set the model context for the notification manager
         let context = ModelContext(container)
         notificationManager.setModelContext(context)
-
-        // Print confirmation that model context is set
-        print("ModelContext set for NotificationManager")
-
-        // No need to set up a popover - SwiftUI will handle window creation
+        
+        #if os(macOS)
+        print("ModelContext set for NotificationManager in macOS AppDelegate")
+        #elseif os(iOS)
+        print("ModelContext set for NotificationManager in iOS AppDelegate")
+        #endif
     }
-
-    /// Called when the application is about to terminate
-    /// - Parameter notification: The notification object
-    func applicationWillTerminate(_ notification: Notification) {
-        // Stop keyboard shortcut monitoring when the app terminates
-        keyboardShortcutManager.stopMonitoring()
-    }
-
+    
     // MARK: - UNUserNotificationCenterDelegate
-
-    /// Called when a notification is delivered while the app is in the foreground
+    
+    /// Called when a notification is about to be presented in the foreground
     /// - Parameters:
     ///   - center: The notification center
-    ///   - notification: The notification that arrived
-    ///   - completionHandler: A handler to execute with the presentation options
-    func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification,
-        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
-    ) {
-        // Always show notifications even when the app is in the foreground
+    ///   - notification: The notification being presented
+    ///   - completionHandler: A block to execute with presentation options
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        #if os(macOS)
+        // Allow banner, sound, and badge for foreground notifications
         completionHandler([.banner, .sound, .badge])
 
         // Ensure badge count is updated after the notification is shown
@@ -172,35 +238,98 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             try? await Task.sleep(nanoseconds: 500_000_000) // 500ms
             self.notificationManager.refreshBadgeCount()
         }
+        #elseif os(iOS)
+        // Allow banner, sound, and badge for foreground notifications
+        if #available(iOS 14.0, *) {
+            completionHandler([.list, .sound, .badge])
+        } else {
+            completionHandler([.alert, .sound, .badge])
+        }
+        
+        // Ensure badge count is updated
+        Task {
+            await notificationManager.refreshBadgeCount()
+        }
+        #endif
     }
-
+    
     /// Called when the user responds to a notification
     /// - Parameters:
     ///   - center: The notification center
-    ///   - response: The user's response to the notification
-    ///   - completionHandler: A completion handler to call when you're done processing the response
-    func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        didReceive response: UNNotificationResponse,
-        withCompletionHandler completionHandler: @escaping () -> Void
-    ) {
-        // Forward to the notification manager to handle
+    ///   - response: The user's response
+    ///   - completionHandler: A block to execute when you're done processing
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        // Forward handling to the notification manager
         Task {
             await notificationManager.userNotificationCenter(center, didReceive: response)
             completionHandler()
         }
     }
 }
-#else
-// Stub for iOS - the real implementation is in iOSAppDelegate.swift
-// This is needed just for compilation
-class AppDelegate: NSObject {
-    var modelContainer: ModelContainer?
-    var todoResetManager: TodoResetManager?
-    var settingsManager: SettingsManager?
 
-    func setupPopoverWithContext() {
-        // No-op on iOS
+#if os(iOS)
+// MARK: - iOS Scene Delegate
+
+/// Manages the UIScene lifecycle for the iOS app
+class iOSSceneDelegate: UIResponder, UIWindowSceneDelegate {
+    /// The app's window
+    var window: UIWindow?
+    
+    /// Called when the scene has been connected to the app
+    /// - Parameters:
+    ///   - scene: The scene that has connected
+    ///   - session: The session the scene is associated with
+    ///   - connectionOptions: Options for configuring the scene
+    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
+        // Handle scene connection
+        
+        // Process notification if app was launched from a notification
+        if let userInfo = connectionOptions.notificationResponse?.notification.request.content.userInfo,
+           let todoId = userInfo["todoId"] as? String {
+            // Store todo ID in UserDefaults for retrieval by the main view
+            UserDefaults.standard.set(todoId, forKey: "pendingTodoId")
+            UserDefaults.standard.set(Date(), forKey: "pendingTodoIdTimestamp")
+            
+            // Post a notification that will be handled in the SwiftUI view hierarchy
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                NotificationCenter.default.post(
+                    name: .showFocusedTodoWithId,
+                    object: nil,
+                    userInfo: ["todoId": todoId]
+                )
+            }
+        }
+    }
+    
+    /// Called when the scene becomes active
+    /// - Parameter scene: The scene that became active
+    @MainActor
+    func sceneDidBecomeActive(_ scene: UIScene) {
+        // Refresh badge count
+        Task {
+            await NotificationManager.shared.refreshBadgeCount()
+        }
+    }
+    
+    /// Called when the scene enters the background
+    /// - Parameter scene: The scene that entered the background
+    @MainActor
+    func sceneDidEnterBackground(_ scene: UIScene) {
+        // Refresh badge count
+        Task {
+            await NotificationManager.shared.refreshBadgeCount()
+        }
+        
+        // Save any changes to the model context
+        do {
+            let appDelegate = UIApplication.shared.delegate as? AppDelegate
+            if let container = appDelegate?.modelContainer {
+                let context = ModelContext(container)
+                try context.save()
+            }
+        } catch {
+            print("Error saving context: \(error.localizedDescription)")
+        }
     }
 }
 #endif
