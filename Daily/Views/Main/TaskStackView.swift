@@ -57,6 +57,9 @@ struct TaskStackView: View {
     /// Set of tasks that should be visually removed due to completion
     @State private var tasksToRemove: Set<ObjectIdentifier> = []
 
+    /// Store completed tasks temporarily for animation purposes
+    @State private var animatingTasks: [Task] = []
+
     /// Whether the stack is currently animating repositioning
     @State private var isRepositioning: Bool = false
     
@@ -169,13 +172,17 @@ struct TaskStackView: View {
     var body: some View {
         // Stack layout with cards
         ZStack {
-            ForEach(Array(tasks.enumerated()), id: \.element.id) { index, task in
+            // First show regular tasks (filtered to show only incomplete ones)
+            let filteredTasks = tasks.filter { task in
+                return !task.isCompleted
+            }
+
+            ForEach(Array(filteredTasks.enumerated()), id: \.element.id) { index, task in
                 // Only show tasks that aren't marked for removal
-                // Let the animation handle tasks being completed
                 if !tasksToRemove.contains(ObjectIdentifier(task)) {
                     taskCardView(for: task, at: index)
                         .accessibilityElement(children: .contain)
-                        .accessibilityLabel("\(task.title), task \(index + 1) of \(tasks.count)")
+                        .accessibilityLabel("\(task.title), task \(index + 1) of \(filteredTasks.count)")
                         .accessibilityHint("Hover to fan out all tasks, tap to view details, or click complete button")
                         .onTapGesture {
                             if let onTaskSelected = onTaskSelected {
@@ -183,6 +190,21 @@ struct TaskStackView: View {
                             }
                         }
                 }
+            }
+
+            // Then show the animating tasks (ones that are completing)
+            ForEach(animatingTasks, id: \.id) { task in
+                // Each animating task gets positioned at index 0
+                taskCardView(for: task, at: 0)
+                    .transition(
+                        AnyTransition.asymmetric(
+                            insertion: .opacity,
+                            removal: AnyTransition.opacity
+                                .combined(with: .offset(x: 250, y: -250))
+                                .combined(with: .scale(scale: 0.2))
+                                .animation(.easeOut(duration: 1.0))
+                        )
+                    )
             }
         }
         .padding()
@@ -200,11 +222,64 @@ struct TaskStackView: View {
                 tasksToRemove.removeAll()
             }
         }
+        // Print current tasks for debugging
+        .onAppear {
+            print("📋 TaskStackView for category \(category?.rawValue ?? "all") initialized with \(tasks.count) tasks")
+            for task in tasks {
+                print("  - \(task.title) (UUID: \(task.uuid.uuidString), Completed: \(task.isCompleted))")
+            }
+        }
         // Listen for task reset notifications
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("TasksResetNotification"))) { _ in
             // When tasks are reset, clear the removal tracking
             withAnimation {
                 tasksToRemove.removeAll()
+            }
+        }
+        // Listen for external task completion notifications
+        .onReceive(NotificationCenter.default.publisher(for: .taskCompletedExternally)) { notification in
+            // Extract the completed task ID and category from the notification
+            print("🔔 TaskStackView for category \(category?.rawValue ?? "all"): Received taskCompletedExternally notification")
+
+            let completedTaskId = notification.userInfo?["completedTaskId"] as? String
+            let taskCategoryStr = notification.userInfo?["category"] as? String
+            let taskCategory = taskCategoryStr.flatMap { TaskCategory(rawValue: $0) }
+
+            print("🔔 TaskStackView: Notification details - taskId: \(completedTaskId ?? "nil"), category: \(taskCategoryStr ?? "nil")")
+
+            // First check if this is a category-specific notification
+            if let completedTaskId = completedTaskId,
+               let taskCategory = taskCategory {
+
+                // Only handle the notification if this stack is for the task's category
+                if taskCategory == category || category == nil {
+                    print("✅ TaskStackView: Handling notification for matching category: \(taskCategory.rawValue)")
+
+                    // Print current tasks for comparison
+                    print("📋 Current tasks in this stack:")
+                    for task in tasks {
+                        print("  - \(task.title) (UUID: \(task.uuid.uuidString), Completed: \(task.isCompleted))")
+                    }
+
+                    handleExternalTaskCompletion(taskId: completedTaskId)
+                } else {
+                    print("⚠️ TaskStackView: Ignoring notification for category \(taskCategory.rawValue) (this stack is for \(category?.rawValue ?? "all"))")
+                }
+            }
+            // Fallback for backward compatibility
+            else if let completedTaskId = completedTaskId {
+                print("🔔 TaskStackView: Handling notification without category info")
+
+                // Print current tasks for comparison
+                print("📋 Current tasks in this stack:")
+                for task in tasks {
+                    print("  - \(task.title) (UUID: \(task.uuid.uuidString), Completed: \(task.isCompleted))")
+                }
+
+                handleExternalTaskCompletion(taskId: completedTaskId)
+            } else {
+                print("❌ TaskStackView: Missing completedTaskId in notification userInfo")
+                print("Available keys: \(notification.userInfo?.keys.map { $0 as? String } ?? [])")
             }
         }
     }
@@ -471,8 +546,109 @@ struct TaskStackView: View {
         return basePosition + hoverBonus
     }
     
+    // MARK: - External Completion Handling
+
+    /// Handles a task completion that happened outside the TaskStackView (notification or focused view)
+    /// - Parameter taskId: The UUID string of the completed task
+    private func handleExternalTaskCompletion(taskId: String) {
+        print("🔍 Searching for task with UUID: \(taskId) to animate completion")
+
+        // Step 1: Try the modelContext directly to find the task, even if it's completed
+        do {
+            // Create a fetch descriptor that includes completed tasks
+            let fetchDescriptor = FetchDescriptor<Task>()
+
+            // Fetch all tasks
+            let allTasks = try modelContext.fetch(fetchDescriptor)
+
+            // Find the task with matching UUID
+            if let completedTask = allTasks.first(where: { $0.uuid.uuidString == taskId }) {
+                print("✅ Found task in database: \(completedTask.title)")
+
+                // Only animate if it belongs to this category
+                if completedTask.category == category || category == nil {
+                    print("🎬 Starting animation for task: \(completedTask.title)")
+
+                    // Add to the animating tasks array
+                    withAnimation {
+                        // First add it to the array (causes insertion animation)
+                        self.animatingTasks.append(completedTask)
+                    }
+
+                    // Then after a short delay, remove it with animation
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        withAnimation(.easeOut(duration: 1.0)) {
+                            // Remove it from the array (triggers removal animation)
+                            self.animatingTasks.removeAll(where: { $0.id == completedTask.id })
+                        }
+
+                        // Enable repositioning animation for the stack
+                        withAnimation {
+                            print("🔄 Enabling repositioning")
+                            self.isRepositioning = true
+                        }
+
+                        // After animation completes, reset the repositioning flag
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                            print("🔄 Disabling repositioning")
+                            self.isRepositioning = false
+                        }
+                    }
+
+                    return
+                } else {
+                    print("⚠️ Task found but belongs to different category - this stack is for \(category?.rawValue ?? "all categories")")
+                }
+            }
+        } catch {
+            print("❌ Error fetching tasks: \(error.localizedDescription)")
+        }
+
+        // If we get here, try the regular approach as a fallback
+        print("⚠️ Trying fallback method with task array")
+
+        // Find the task in our tasks array
+        if let taskIndex = tasks.firstIndex(where: { $0.uuid.uuidString == taskId }) {
+            let task = tasks[taskIndex]
+            print("✅ Found task at index \(taskIndex): \(task.title)")
+
+            // Ensure the task isn't already in the removal set
+            if !tasksToRemove.contains(ObjectIdentifier(task)) {
+                print("🎬 Animating external completion for task: \(task.title)")
+
+                // Start the completion animation on the main thread
+                DispatchQueue.main.async {
+                    withAnimation(.easeOut(duration: 1.0).delay(0.3)) {
+                        print("➕ Adding task to tasksToRemove set")
+                        self.tasksToRemove.insert(ObjectIdentifier(task))
+                    }
+
+                    // Enable repositioning animation
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        // Enable repositioning animation
+                        withAnimation {
+                            print("🔄 Enabling repositioning")
+                            self.isRepositioning = true
+                        }
+
+                        // After animation completes, reset the repositioning flag
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                            print("🔄 Disabling repositioning")
+                            self.isRepositioning = false
+                        }
+                    }
+                }
+            } else {
+                print("⚠️ Task already in removal set, skipping animation")
+            }
+        } else {
+            print("❌ Could not find task with ID: \(taskId) in this TaskStackView")
+            print("❓ Is this the correct TaskStackView for this task's category?")
+        }
+    }
+
     // MARK: - Z-index Calculation
-    
+
     /// Calculate the z-index for a card, taking into account hover state
     /// - Parameter index: The index of the card in the stack
     /// - Returns: The z-index value to determine visual stacking order

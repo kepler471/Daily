@@ -382,7 +382,24 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
 
             // Try to find the task by its UUID
             if let task = try context.fetchTaskByUUID(taskId) {
-                // Mark the task as completed
+                print("📣 Found task to complete: \(task.title) (category: \(task.category.rawValue))")
+
+                // First post the notification so stacks can animate the task before it's completed
+                print("📣 NotificationManager: Posting taskCompletedExternally notification for task: \(task.title)")
+                print("📣 NotificationManager: Task UUID: \(task.uuid.uuidString)")
+                NotificationCenter.default.post(
+                    name: .taskCompletedExternally,
+                    object: nil,
+                    userInfo: [
+                        "completedTaskId": task.uuid.uuidString,
+                        "category": task.category.rawValue
+                    ]
+                )
+
+                // Wait for animation to begin
+                try await SwiftUI.Task.sleep(nanoseconds: 500_000_000) // 500ms delay
+
+                // After animation has started, mark the task as completed
                 task.isCompleted = true
 
                 // Cancel the notification for this task since it's now completed
