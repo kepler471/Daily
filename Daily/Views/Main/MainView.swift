@@ -57,6 +57,14 @@ struct MainView: View {
         // We'll set up notification handlers in onAppear
     }
 
+    // MARK: - Computed Properties
+
+    /// Returns true if any overlay is currently being shown
+    private var isAnyOverlayVisible: Bool {
+        showingAddTask || showingRequiredCompletedTasks ||
+        showingSuggestedCompletedTasks || showingFocusedTask
+    }
+
     // MARK: - Setup Methods
 
     /// Configure the view when it first appears
@@ -191,9 +199,10 @@ struct MainView: View {
                 .padding(.horizontal)
                 .padding(.vertical, 8)
                 .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
-                
+
                 Spacer()
             }
+            .hideWhenOverlay(isAnyOverlayVisible)
             
             // MARK: Overlays
 
@@ -217,19 +226,26 @@ struct MainView: View {
                     .transition(.opacity)
                     .zIndex(100)
             }
+
+            // Add task overlay
+            if showingAddTask {
+                AddTaskView(isPresented: $showingAddTask)
+                    .transition(.opacity)
+                    .zIndex(100)
+            }
         }
         // MARK: View Modifiers
 
-        // Add Task Overlay
+        // Add Task Button in top left corner
         .overlay(
-            Group {
-                if showingAddTask {
-                    AddTaskView(isPresented: $showingAddTask)
-                        .transition(.opacity)
-                        .zIndex(100)
-                }
-            }
+            AddTaskButtonView(showingAddTask: $showingAddTask)
+                .padding([.top], 16)
+                .padding([.leading], 16)
+                .hideWhenOverlay(isAnyOverlayVisible),
+            alignment: .topLeading
         )
+
+        // Animation modifiers
         .animation(.easeInOut(duration: 0.3), value: showingAddTask)
         .animation(.easeInOut(duration: 0.3), value: showingRequiredCompletedTasks)
         .animation(.easeInOut(duration: 0.3), value: showingSuggestedCompletedTasks)
@@ -237,6 +253,19 @@ struct MainView: View {
         .onAppear {
             setupView()
         }
+    }
+}
+
+// MARK: - Hide When Overlay View Modifier
+
+extension View {
+    /// Hides the view when the condition is true
+    /// - Parameter condition: Boolean condition that determines if the view should be hidden
+    /// - Returns: Modified view that is hidden when the condition is true
+    func hideWhenOverlay(_ condition: Bool) -> some View {
+        self.opacity(condition ? 0 : 1)
+            .animation(.easeInOut(duration: 0.2), value: condition)
+            .disabled(condition)
     }
 }
 
