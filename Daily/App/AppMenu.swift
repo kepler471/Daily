@@ -29,6 +29,9 @@ extension Notification.Name {
 
     /// Notification to show the focused task view
     static let showFocusedTask = Notification.Name("ShowFocusedTask")
+
+    /// Notification to show a specific task in the focused task view
+    static let showFocusedTaskWithId = Notification.Name("ShowFocusedTaskWithId")
 }
 
 // MARK: - Application Menu Manager

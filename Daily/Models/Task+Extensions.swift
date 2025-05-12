@@ -190,16 +190,15 @@ extension ModelContext {
         return try countTasks(isCompleted: true, category: category)
     }
 
-    /// Fetches a task by its hash identifier (used for notification lookup)
-    /// - Parameter hashId: The string hash identifier of the task
+    /// Fetches a task by its UUID string (used for notification lookup)
+    /// - Parameter uuidString: The string representation of the task's UUID
     /// - Returns: The task if found, nil otherwise
     /// - Throws: Error if the fetch operation fails
-    func fetchTaskByHashId(_ hashId: String) throws -> Task? {
-        // We need to fetch all tasks and filter by the hash value
-        // since we can't directly query by the hash of the id
+    func fetchTaskByUUID(_ uuidString: String) throws -> Task? {
+        // We need to fetch all tasks and filter by the UUID
         let allTasks = try fetchTasks()
 
-        // Find the task whose id hash matches the provided hash
-        return allTasks.first { String($0.id.hashValue) == hashId }
+        // Find the task whose UUID string matches the provided string
+        return allTasks.first { $0.uuid.uuidString == uuidString }
     }
 }

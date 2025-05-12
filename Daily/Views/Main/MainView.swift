@@ -71,6 +71,58 @@ struct MainView: View {
     private func setupView() {
         setupNotificationHandlers()
 
+        // Check if we have a pending task ID from a notification
+        checkForPendingNotificationTask()
+    }
+
+    /// Check for a pending task ID from a notification and focus that task
+    private func checkForPendingNotificationTask() {
+        // Check if we have a pending task ID stored
+        if let taskId = UserDefaults.standard.string(forKey: "pendingTaskId"),
+           let timestamp = UserDefaults.standard.object(forKey: "pendingTaskIdTimestamp") as? Date {
+
+            // Only use pending task IDs from the last 30 seconds
+            if Date().timeIntervalSince(timestamp) < 30 {
+                print("Found pending task ID from notification: \(taskId)")
+
+                // Try to find and focus the task
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    do {
+                        if let task = try self.modelContext.fetchTaskByUUID(taskId) {
+                            print("Focusing task from notification: \(task.title)")
+                            self.focusedTask = task
+                            self.showingFocusedTask = true
+
+                            // Clear the pending task ID
+                            UserDefaults.standard.removeObject(forKey: "pendingTaskId")
+                            UserDefaults.standard.removeObject(forKey: "pendingTaskIdTimestamp")
+                            return
+                        } else {
+                            print("Could not find task with ID: \(taskId)")
+                        }
+                    } catch {
+                        print("Error finding task with ID \(taskId): \(error.localizedDescription)")
+                    }
+
+                    // Fallback to showing the top required task if the specific task wasn't found
+                    self.showDefaultFocusedTask()
+                }
+            } else {
+                // Timestamp is too old, show default focused task
+                showDefaultFocusedTask()
+
+                // Clear the pending task ID
+                UserDefaults.standard.removeObject(forKey: "pendingTaskId")
+                UserDefaults.standard.removeObject(forKey: "pendingTaskIdTimestamp")
+            }
+        } else {
+            // No pending task ID, show default focused task
+            showDefaultFocusedTask()
+        }
+    }
+
+    /// Show the top required task in focused view
+    private func showDefaultFocusedTask() {
         // Show focused task view on app launch if there are required tasks
         if !requiredTasks.isEmpty {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -130,6 +182,33 @@ struct MainView: View {
         ) { _ in
             self.focusedTask = self.requiredTasks.first
             self.showingFocusedTask = true
+        }
+
+        // Add notification for showing a specific task in focused view
+        NotificationCenter.default.addObserver(
+            forName: .showFocusedTaskWithId,
+            object: nil,
+            queue: .main
+        ) { notification in
+            guard let taskId = notification.userInfo?["taskId"] as? String else {
+                print("No taskId found in notification userInfo")
+                return
+            }
+
+            print("Received notification to focus task with ID: \(taskId)")
+
+            // Find the task with the given UUID and show it in focused view
+            do {
+                if let task = try self.modelContext.fetchTaskByUUID(taskId) {
+                    print("Found task for notification: \(task.title)")
+                    self.focusedTask = task
+                    self.showingFocusedTask = true
+                } else {
+                    print("No task found with UUID \(taskId)")
+                }
+            } catch {
+                print("Error finding task with UUID \(taskId): \(error.localizedDescription)")
+            }
         }
     }
     

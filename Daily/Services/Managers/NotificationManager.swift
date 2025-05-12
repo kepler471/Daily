@@ -203,8 +203,8 @@ class NotificationManager: NSObject, ObservableObject {
         content.sound = .default
         content.categoryIdentifier = Self.taskCategoryIdentifier
 
-        // Store the task ID in the userInfo dictionary
-        let taskID = String(task.id.hashValue)
+        // Store the task UUID in the userInfo dictionary
+        let taskID = task.uuid.uuidString
         content.userInfo = ["taskId": taskID]
 
         // Create date components trigger for the scheduled time
@@ -220,9 +220,8 @@ class NotificationManager: NSObject, ObservableObject {
         )
 
         // Create the notification request
-        let taskId = String(task.id.hashValue)
         let request = UNNotificationRequest(
-            identifier: Self.taskNotificationIdentifierPrefix + taskId,
+            identifier: Self.taskNotificationIdentifierPrefix + taskID,
             content: content,
             trigger: trigger
         )
@@ -240,7 +239,7 @@ class NotificationManager: NSObject, ObservableObject {
     /// - Parameter task: The task whose notification should be canceled
     @MainActor
     func cancelNotification(for task: Daily.Task) async {
-        let taskID = String(task.id.hashValue)
+        let taskID = task.uuid.uuidString
 
         let identifier = Self.taskNotificationIdentifierPrefix + taskID
         notificationCenter.removePendingNotificationRequests(withIdentifiers: [identifier])
@@ -303,7 +302,28 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
 
         case UNNotificationDefaultActionIdentifier:
             // Handle the default action (notification tapped)
-            print("Notification tapped with user info: \(userInfo)")
+            if let taskId = userInfo["taskId"] as? String {
+                // Store task ID in UserDefaults for retrieval on app launch
+                UserDefaults.standard.set(taskId, forKey: "pendingTaskId")
+                UserDefaults.standard.set(Date(), forKey: "pendingTaskIdTimestamp")
+
+                // Activate the app first to ensure it's in foreground
+                NSApplication.shared.activate(ignoringOtherApps: true)
+
+                // Give a slight delay to ensure the app is active before posting the notification
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    // Post notification to show the specific task in focused view
+                    NotificationCenter.default.post(
+                        name: .showFocusedTaskWithId,
+                        object: nil,
+                        userInfo: ["taskId": taskId]
+                    )
+                    print("Notification tapped for task ID: \(taskId)")
+
+                    // Also post the generic open app notification to ensure the window is visible
+                    NotificationCenter.default.post(name: .openDailyApp, object: nil)
+                }
+            }
 
         default:
             break
@@ -311,7 +331,7 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
     }
 
     /// Completes a task from a notification action
-    /// - Parameter taskId: The hash ID of the task to complete
+    /// - Parameter taskId: The UUID string of the task to complete
     @MainActor
     private func completeTaskFromNotification(taskId: String) async {
         // Ensure we have a model context
@@ -321,8 +341,8 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
         }
 
         do {
-            // Try to find the task by its hash ID
-            if let task = try context.fetchTaskByHashId(taskId) {
+            // Try to find the task by its UUID
+            if let task = try context.fetchTaskByUUID(taskId) {
                 // Mark the task as completed
                 task.isCompleted = true
 
@@ -337,7 +357,7 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
                 // Post a notification to refresh the UI
                 NotificationCenter.default.post(name: .tasksResetNotification, object: nil)
             } else {
-                print("Error: Could not find task with ID \(taskId)")
+                print("Error: Could not find task with UUID \(taskId)")
             }
         } catch {
             print("Error completing task from notification: \(error.localizedDescription)")

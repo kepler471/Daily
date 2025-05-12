@@ -30,22 +30,25 @@ enum TaskCategory: String, Codable, Hashable {
 @Model
 final class Task {
     // MARK: Properties
-    
+
+    /// Stable UUID for the task (used for notification identification)
+    var uuid: UUID
+
     /// The title or description of the task
     var title: String
-    
+
     /// The display order for the task (lower numbers appear first)
     var order: Int
-    
+
     /// The raw string representation of the task category (for SwiftData compatibility)
     var categoryRaw: String
-    
+
     /// Optional scheduled time for when the task should be completed
     var scheduledTime: Date?
-    
+
     /// Whether the task has been completed
     var isCompleted: Bool
-    
+
     /// When the task was created
     var createdAt: Date
     
@@ -70,6 +73,7 @@ final class Task {
     ///   - category: The category of the task (default: .required)
     ///   - scheduledTime: Optional scheduled time for the task
     init(title: String, order: Int, category: TaskCategory = .required, scheduledTime: Date? = nil) {
+        self.uuid = UUID()
         self.title = title
         self.order = order
         self.categoryRaw = category.rawValue
@@ -77,9 +81,10 @@ final class Task {
         self.isCompleted = false
         self.createdAt = Date()
     }
-    
+
     /// Empty initializer required by SwiftData for model creation
     init() {
+        self.uuid = UUID()
         self.title = ""
         self.order = 0
         self.categoryRaw = TaskCategory.required.rawValue
