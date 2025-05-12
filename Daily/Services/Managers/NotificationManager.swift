@@ -8,17 +8,23 @@
 import Foundation
 import UserNotifications
 import SwiftUI
-import AppKit
 import SwiftData
 import Observation
 
-/// Centralized manager for handling app notifications
+#if os(iOS)
+import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
+
+/// Centralized manager for handling app notifications across platforms
 ///
 /// NotificationManager is responsible for:
 /// - Requesting and checking notification permissions
 /// - Scheduling notifications for todos
 /// - Handling notification interactions
 /// - Managing notification categories and actions
+/// - Badge management across platforms
 class NotificationManager: NSObject, ObservableObject {
     // MARK: - Shared Instance
     
@@ -157,10 +163,16 @@ class NotificationManager: NSObject, ObservableObject {
     
     /// Opens the system notification settings for the app
     func openNotificationSettings() {
+        #if os(macOS)
         // Open the System Preferences/Settings and go to Notifications
         if let settingsURL = URL(string: "x-apple.systempreferences:com.apple.preference.notifications") {
             NSWorkspace.shared.open(settingsURL)
         }
+        #elseif os(iOS)
+        if let url = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(url)
+        }
+        #endif
     }
     
     // MARK: - Notification Categories Setup
@@ -251,13 +263,11 @@ class NotificationManager: NSObject, ObservableObject {
         content.sound = UNNotificationSound(named: UNNotificationSoundName(rawValue: "Funk.aiff"))
         content.categoryIdentifier = Self.todoCategoryIdentifier
 
-        // Add subtitle to make it more noticeable (we'll manage badges separately)
-        if #available(macOS 12.0, *) {
+        // Add subtitle to make it more noticeable
+        if #available(macOS 12.0, iOS 15.0, *) {
             // Add subtitle for more context if available
             content.subtitle = "Time to complete: \(todo.scheduledTime?.formatted(date: .omitted, time: .shortened) ?? "now")"
         }
-
-        // We'll let users set their preferred notification behavior in system settings
 
         // Set a unique thread ID to prevent grouping of notifications
         // Using the todo's UUID ensures each notification is treated individually
@@ -265,7 +275,7 @@ class NotificationManager: NSObject, ObservableObject {
 
         // Store the todo UUID in the userInfo dictionary
         let todoID = todo.uuid.uuidString
-        let userInfo = ["todoId": todoID] as [String: Any]
+        let userInfo = ["todoId": todoID, "category": todo.category.rawValue] as [String: Any]
         content.userInfo = userInfo
 
         // Create date components trigger for the scheduled time
@@ -390,112 +400,35 @@ class NotificationManager: NSObject, ObservableObject {
                 let count = notifications.count
                 print("Badge refresh: Found \(count) delivered notifications")
 
+                // Set the badge count using the platform-specific method
+                #if os(macOS)
                 // Set or clear the badge based on notification count
-                NSApplication.shared.dockTile.showsApplicationBadge = true
-
-                if count > 0 {
-                    // Set badge to the exact number of delivered notifications
-                    NSApplication.shared.dockTile.badgeLabel = "\(count)"
-                } else {
-                    // Remove badge when there are no notifications
-                    NSApplication.shared.dockTile.badgeLabel = nil
-                }
-
-                // Ensure the Dock tile is updated
-                NSApplication.shared.dockTile.display()
+                NSApplication.shared.setBadgeCount(count)
+                #elseif os(iOS)
+                // Set badge to the exact number of delivered notifications
+                UIApplication.shared.setBadgeCount(count)
+                #endif
             }
         }
     }
-}
-
-// MARK: - Notification Center Delegate
-
-extension NotificationManager: UNUserNotificationCenterDelegate {
-    /// Called when a notification is delivered to a foreground app
-    @MainActor
-    func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification
-    ) async -> UNNotificationPresentationOptions {
-        // Show notifications even when the app is in the foreground
-        // Use appropriate options based on macOS version
-
-        if #available(macOS 12.0, *) {
-            return [.list, .sound, .badge]
-        } else {
-            // For macOS 11.0 and earlier
-            return [.banner, .sound, .badge]
-        }
+    
+    // MARK: - Platform-Specific Activation
+    
+    /// Activate the app and bring it to the foreground
+    func activateApp() {
+        #if os(macOS)
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        #elseif os(iOS)
+        // On iOS, this happens automatically when the user taps a notification
+        // or via scene configuration
+        #endif
     }
-
-    /// Called when a user responds to a notification
+    
+    // MARK: - Notification Handling - Platform Specific
+    
+    /// Handle a todo being completed from a notification
     @MainActor
-    func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        didReceive response: UNNotificationResponse
-    ) async {
-        // Get the notification action identifier
-        let actionIdentifier = response.actionIdentifier
-
-        // Get the notification user info dictionary
-        let userInfo = response.notification.request.content.userInfo
-
-        // Handle different notification actions
-        switch actionIdentifier {
-        case Self.completeTodoActionIdentifier:
-            // Handle completing a todo from a notification
-            if let todoId = userInfo["todoId"] as? String {
-                await completeTodoFromNotification(todoId: todoId)
-                refreshBadgeCount()
-            }
-
-        case Self.dismissActionIdentifier:
-            // Handle dismissing a notification
-            print("Notification explicitly dismissed by user")
-            // Refresh badge count after explicit dismissal
-            refreshBadgeCount()
-
-        case UNNotificationDefaultActionIdentifier:
-            // Handle the default action (notification tapped)
-            if let todoId = userInfo["todoId"] as? String {
-                // Store todo ID in UserDefaults for retrieval on app launch
-                UserDefaults.standard.set(todoId, forKey: "pendingTodoId")
-                UserDefaults.standard.set(Date(), forKey: "pendingTodoIdTimestamp")
-
-                // Activate the app first to ensure it's in foreground
-                NSApplication.shared.activate(ignoringOtherApps: true)
-
-                // Give a slight delay to ensure the app is active before posting the notification
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    // Post notification to show the specific todo in focused view
-                    NotificationCenter.default.post(
-                        name: .showFocusedTodoWithId,
-                        object: nil,
-                        userInfo: ["todoId": todoId]
-                    )
-                    print("Notification tapped for todo ID: \(todoId)")
-
-                    // Also post the generic open app notification to ensure the window is visible
-                    NotificationCenter.default.post(name: .openDailyApp, object: nil)
-                }
-            }
-
-        case UNNotificationDismissActionIdentifier:
-            // Handle system-level dismissal (X button, swipe away, etc.)
-            print("Notification dismissed by system action")
-            // Refresh badge count after system dismissal
-            refreshBadgeCount()
-
-        default:
-            print("Unhandled notification action: \(actionIdentifier)")
-            break
-        }
-    }
-
-    /// Completes a todo from a notification action
-    /// - Parameter todoId: The UUID string of the todo to complete
-    @MainActor
-    private func completeTodoFromNotification(todoId: String) async {
+    func completeTodoFromNotification(todoId: String) async {
         // Ensure we have a model context
         guard let context = activeModelContext else {
             print("Error: No active model context available for todo completion")
@@ -505,7 +438,7 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
             UserDefaults.standard.set(Date(), forKey: "pendingTodoCompletionTimestamp")
 
             // Activate the app to ensure the context becomes available
-            NSApplication.shared.activate(ignoringOtherApps: true)
+            self.activateApp()
             return
         }
 
@@ -545,13 +478,96 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
                 // Post a notification to refresh the UI
                 NotificationCenter.default.post(name: .todosResetNotification, object: nil)
 
-                // The badge count is refreshed by cancelNotification, but let's make sure
+                // Refresh the badge count
                 refreshBadgeCount()
             } else {
                 print("Error: Could not find todo with UUID \(todoId)")
             }
         } catch {
             print("Error completing todo from notification: \(error.localizedDescription)")
+        }
+    }
+}
+
+// MARK: - Notification Center Delegate
+
+extension NotificationManager: UNUserNotificationCenterDelegate {
+    /// Called when a notification is delivered to a foreground app
+    @MainActor
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        // Show notifications even when the app is in the foreground
+        if #available(iOS 14.0, macOS 12.0, *) {
+            return [.list, .sound, .badge]
+        } else {
+            // For older versions
+            return [.alert, .sound, .badge]
+        }
+    }
+
+    /// Called when a user responds to a notification
+    @MainActor
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse
+    ) async {
+        // Get the notification action identifier
+        let actionIdentifier = response.actionIdentifier
+
+        // Get the notification user info dictionary
+        let userInfo = response.notification.request.content.userInfo
+
+        // Handle different notification actions
+        switch actionIdentifier {
+        case Self.completeTodoActionIdentifier:
+            // Handle completing a todo from a notification
+            if let todoId = userInfo["todoId"] as? String {
+                await completeTodoFromNotification(todoId: todoId)
+                refreshBadgeCount()
+            }
+
+        case Self.dismissActionIdentifier:
+            // Handle dismissing a notification
+            print("Notification explicitly dismissed by user")
+            // Refresh badge count after explicit dismissal
+            refreshBadgeCount()
+
+        case UNNotificationDefaultActionIdentifier:
+            // Handle the default action (notification tapped)
+            if let todoId = userInfo["todoId"] as? String {
+                // Store todo ID in UserDefaults for retrieval on app launch
+                UserDefaults.standard.set(todoId, forKey: "pendingTodoId")
+                UserDefaults.standard.set(Date(), forKey: "pendingTodoIdTimestamp")
+
+                // Activate the app first to ensure it's in foreground
+                self.activateApp()
+
+                // Give a slight delay to ensure the app is active before posting the notification
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    // Post notification to show the specific todo in focused view
+                    NotificationCenter.default.post(
+                        name: .showFocusedTodoWithId,
+                        object: nil,
+                        userInfo: ["todoId": todoId]
+                    )
+                    print("Notification tapped for todo ID: \(todoId)")
+
+                    // Also post the generic open app notification to ensure the window is visible
+                    NotificationCenter.default.post(name: .openDailyApp, object: nil)
+                }
+            }
+
+        case UNNotificationDismissActionIdentifier:
+            // Handle system-level dismissal (X button, swipe away, etc.)
+            print("Notification dismissed by system action")
+            // Refresh badge count after system dismissal
+            refreshBadgeCount()
+
+        default:
+            print("Unhandled notification action: \(actionIdentifier)")
+            break
         }
     }
 }

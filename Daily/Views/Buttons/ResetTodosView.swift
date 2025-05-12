@@ -30,7 +30,9 @@ struct ResetTodosView: View {
                         .fill(Color.blue)
                 )
         }
+        #if os(macOS)
         .help("Reset all todos to incomplete")
+        #endif
         .accessibilityLabel("Reset all todos")
         .accessibilityHint("Marks all todos as incomplete to start a new day")
     }

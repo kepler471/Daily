@@ -6,6 +6,8 @@
 //
 
 import SwiftUI
+
+#if os(macOS)
 import AppKit
 
 /// Manages global keyboard shortcuts for the application
@@ -15,21 +17,21 @@ import AppKit
 /// to maintain the same behavior as menu-triggered actions.
 class KeyboardShortcutManager: NSObject {
     // MARK: Properties
-    
+
     /// The local event monitor for keyboard events
     private var localEventMonitor: Any?
-    
+
     /// Stores registered keyboard shortcuts and their associated actions
     private var shortcuts: [KeyboardShortcut] = []
-    
+
     // MARK: - Setup Methods
-    
+
     /// Initialize and register keyboard shortcuts
     override init() {
         super.init()
         registerShortcuts()
     }
-    
+
     /// Register standard keyboard shortcuts matching the menu items
     private func registerShortcuts() {
         // Register all the shortcuts that match the menu items
@@ -52,25 +54,25 @@ class KeyboardShortcutManager: NSObject {
             // Note: We don't add a Quit shortcut as Cmd+Q is already handled by the system
         ]
     }
-    
+
     // MARK: - Event Monitor Setup
-    
+
     /// Start monitoring for keyboard events
     func startMonitoring() {
         localEventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self = self else { return event }
-            
+
             // Check if the event matches any registered shortcut
             if self.handleKeyEvent(event) {
                 // If handled, don't pass the event along
                 return nil
             }
-            
+
             // Otherwise, pass the event along for normal processing
             return event
         }
     }
-    
+
     /// Stop monitoring for keyboard events
     func stopMonitoring() {
         if let monitor = localEventMonitor {
@@ -78,9 +80,9 @@ class KeyboardShortcutManager: NSObject {
             localEventMonitor = nil
         }
     }
-    
+
     // MARK: - Event Handling
-    
+
     /// Handle a key event by checking against registered shortcuts
     /// - Parameter event: The NSEvent to check
     /// - Returns: True if the event was handled, false otherwise
@@ -88,7 +90,7 @@ class KeyboardShortcutManager: NSObject {
         // Extract key and modifiers from the event
         guard let characters = event.charactersIgnoringModifiers else { return false }
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        
+
         // Check each shortcut for a match
         for shortcut in shortcuts {
             if shortcut.matches(key: characters, modifiers: modifiers) {
@@ -97,7 +99,7 @@ class KeyboardShortcutManager: NSObject {
                 return true
             }
         }
-        
+
         return false
     }
 }
@@ -108,13 +110,13 @@ class KeyboardShortcutManager: NSObject {
 struct KeyboardShortcut {
     /// The key character (e.g., "n" for new)
     let key: String
-    
+
     /// Modifier flags (e.g., Command, Option)
     let modifiers: NSEvent.ModifierFlags
-    
+
     /// The action to perform when the shortcut is triggered
     let action: () -> Void
-    
+
     /// Check if the given key and modifiers match this shortcut
     /// - Parameters:
     ///   - key: The key string to check
@@ -128,3 +130,18 @@ struct KeyboardShortcut {
 // MARK: - Notification Extension
 
 // Note: Other notification names are defined in AppMenu.swift
+
+#else
+// iOS stub for KeyboardShortcutManager
+class KeyboardShortcutManager: NSObject {
+    static let shared = KeyboardShortcutManager()
+
+    func startMonitoring() {
+        // No-op on iOS
+    }
+
+    func stopMonitoring() {
+        // No-op on iOS
+    }
+}
+#endif

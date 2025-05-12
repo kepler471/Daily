@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import AppKit
 
 // MARK: - Notification Constants
 
@@ -35,7 +34,13 @@ extension Notification.Name {
 
     /// Notification to indicate a todo was completed from outside the TodoStackView
     static let todoCompletedExternally = Notification.Name("TodoCompletedExternally")
+
+    /// Notification to indicate todos were reset
+    static let todosResetNotification = Notification.Name("TodosResetNotification")
 }
+
+#if os(macOS)
+import AppKit
 
 // MARK: - Application Menu Manager
 
@@ -172,3 +177,9 @@ class AppMenuManager: NSObject {
         NotificationCenter.default.post(name: .openSettingsWithLink, object: nil)
     }
 }
+#else
+// iOS version of AppMenuManager (empty to satisfy Swift)
+class AppMenuManager {
+    // Empty implementation for iOS
+}
+#endif

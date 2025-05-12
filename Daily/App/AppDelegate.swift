@@ -6,9 +6,11 @@
 //
 
 import SwiftUI
-import AppKit
 import SwiftData
 import UserNotifications
+
+#if os(macOS)
+import AppKit
 
 // MARK: - App Delegate
 
@@ -141,7 +143,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
         // No need to set up a popover - SwiftUI will handle window creation
     }
-    
+
     /// Called when the application is about to terminate
     /// - Parameter notification: The notification object
     func applicationWillTerminate(_ notification: Notification) {
@@ -189,3 +191,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         }
     }
 }
+#else
+// Stub for iOS - the real implementation is in iOSAppDelegate.swift
+// This is needed just for compilation
+class AppDelegate: NSObject {
+    var modelContainer: ModelContainer?
+    var todoResetManager: TodoResetManager?
+    var settingsManager: SettingsManager?
+
+    func setupPopoverWithContext() {
+        // No-op on iOS
+    }
+}
+#endif

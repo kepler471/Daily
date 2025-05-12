@@ -33,7 +33,7 @@ class iOSAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterD
     var settingsManager: SettingsManager?
     
     /// Manager for handling notifications
-    private var notificationManager = CrossPlatformNotificationManager.shared
+    private var notificationManager = NotificationManager.shared
     
     // MARK: - Application Lifecycle
     
@@ -214,7 +214,7 @@ class iOSSceneDelegate: UIResponder, UIWindowSceneDelegate {
     func sceneDidBecomeActive(_ scene: UIScene) {
         // Refresh badge count
         Task {
-            await CrossPlatformNotificationManager.shared.refreshBadgeCount()
+            await NotificationManager.shared.refreshBadgeCount()
         }
     }
     
@@ -224,7 +224,7 @@ class iOSSceneDelegate: UIResponder, UIWindowSceneDelegate {
     func sceneDidEnterBackground(_ scene: UIScene) {
         // Refresh badge count
         Task {
-            await CrossPlatformNotificationManager.shared.refreshBadgeCount()
+            await NotificationManager.shared.refreshBadgeCount()
         }
         
         // Save any changes to the model context

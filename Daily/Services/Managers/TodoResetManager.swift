@@ -8,16 +8,19 @@
 import Foundation
 import SwiftData
 import Combine
-import AppKit
 import SwiftUI
 
-// MARK: - Notification Constants
+#if os(macOS)
+import AppKit
+#elseif os(iOS)
+import UIKit
+#endif
 
-/// Extension for centralizing notification names used in the todo reset system
-extension Notification.Name {
-    /// Notification sent when todos are reset (for UI updates)
-    static let todosResetNotification = Notification.Name("TodosResetNotification")
-}
+// This section is now moved to AppMenu.swift to centralize notification names
+// extension Notification.Name {
+//     /// Notification sent when todos are reset (for UI updates)
+//     static let todosResetNotification = Notification.Name("TodosResetNotification")
+// }
 
 // MARK: - ModelContext Extensions
 // Note: ModelContext extensions are centralized in Todo+Extensions.swift
@@ -57,11 +60,19 @@ class TodoResetManager: ObservableObject {
         scheduleNextReset()
         
         // Subscribe to app becoming active to reschedule if needed
+        #if os(macOS)
         NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
             .sink { [weak self] _ in
                 self?.checkAndRescheduleIfNeeded()
             }
             .store(in: &cancellables)
+        #elseif os(iOS)
+        NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)
+            .sink { [weak self] _ in
+                self?.checkAndRescheduleIfNeeded()
+            }
+            .store(in: &cancellables)
+        #endif
     }
     
     // MARK: - Reset Scheduling

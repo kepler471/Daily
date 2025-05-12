@@ -31,7 +31,9 @@ struct ResetDataView: View {
                         .fill(Color.red)
                 )
         }
+        #if os(macOS)
         .help("Reset all data to default")
+        #endif
         .accessibilityLabel("Reset all data")
         .accessibilityHint("Deletes all todos and recreates sample data")
     }
