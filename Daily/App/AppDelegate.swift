@@ -92,12 +92,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         // since we're using a regular window now
 
         // We keep the method signature the same to avoid breaking changes elsewhere
-        guard modelContainer != nil,
+        guard let container = modelContainer,
               taskResetManager != nil,
               settingsManager != nil else {
             print("Warning: Required dependencies not available.")
             return
         }
+
+        // Set up the model context for the notification manager
+        let context = ModelContext(container)
+        notificationManager.modelContext = context
 
         // No need to set up a popover - SwiftUI will handle window creation
     }

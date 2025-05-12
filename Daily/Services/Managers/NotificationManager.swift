@@ -39,9 +39,12 @@ class NotificationManager: NSObject, ObservableObject {
     var isDenied: Bool {
         return authorizationStatus == .denied
     }
-    
+
     /// The notification center for the app
     private let notificationCenter = UNUserNotificationCenter.current()
+
+    /// The model context for database operations
+    weak var modelContext: ModelContext?
     
     // MARK: - Constants
 
@@ -286,25 +289,58 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
     ) async {
         // Get the notification action identifier
         let actionIdentifier = response.actionIdentifier
-        
+
         // Get the notification user info dictionary
         let userInfo = response.notification.request.content.userInfo
-        
+
         // Handle different notification actions
         switch actionIdentifier {
         case Self.completeTaskActionIdentifier:
             // Handle completing a task from a notification
             if let taskId = userInfo["taskId"] as? String {
-                // TODO: Implement task completion logic
-                print("Task with ID \(taskId) marked as completed from notification")
+                await completeTaskFromNotification(taskId: taskId)
             }
-            
+
         case UNNotificationDefaultActionIdentifier:
             // Handle the default action (notification tapped)
             print("Notification tapped with user info: \(userInfo)")
-            
+
         default:
             break
+        }
+    }
+
+    /// Completes a task from a notification action
+    /// - Parameter taskId: The hash ID of the task to complete
+    @MainActor
+    private func completeTaskFromNotification(taskId: String) async {
+        // Ensure we have a model context
+        guard let context = modelContext else {
+            print("Error: Model context not available for task completion")
+            return
+        }
+
+        do {
+            // Try to find the task by its hash ID
+            if let task = try context.fetchTaskByHashId(taskId) {
+                // Mark the task as completed
+                task.isCompleted = true
+
+                // Cancel the notification for this task since it's now completed
+                await cancelNotification(for: task)
+
+                // Save the changes to the database
+                try context.save()
+
+                print("Successfully completed task from notification: \(task.title)")
+
+                // Post a notification to refresh the UI
+                NotificationCenter.default.post(name: .tasksResetNotification, object: nil)
+            } else {
+                print("Error: Could not find task with ID \(taskId)")
+            }
+        } catch {
+            print("Error completing task from notification: \(error.localizedDescription)")
         }
     }
 }
