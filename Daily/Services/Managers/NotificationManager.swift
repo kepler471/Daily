@@ -44,7 +44,34 @@ class NotificationManager: NSObject, ObservableObject {
     private let notificationCenter = UNUserNotificationCenter.current()
 
     /// The model context for database operations
-    weak var modelContext: ModelContext?
+    private var modelContextReference: ModelContext?
+
+    /// The model container reference used to create new contexts when needed
+    private var modelContainer: ModelContainer?
+
+    /// Get an active model context for performing database operations
+    private var activeModelContext: ModelContext? {
+        // If we have a direct reference, use it
+        if let context = modelContextReference {
+            return context
+        }
+
+        // If we have a container, create a new context
+        if let container = modelContainer {
+            return ModelContext(container)
+        }
+
+        return nil
+    }
+
+    /// Set the model context for database operations
+    func setModelContext(_ context: ModelContext) {
+        self.modelContextReference = context
+
+        // Store the container reference as well for creating new contexts if needed
+        self.modelContainer = context.container
+        print("ModelContainer stored in NotificationManager")
+    }
     
     // MARK: - Constants
 
@@ -167,6 +194,9 @@ class NotificationManager: NSObject, ObservableObject {
         if !isAuthorized {
             return
         }
+
+        // Log the task's UUID for debugging
+        print("Scheduling notification for task: \(task.title) with UUID: \(task.uuid.uuidString)")
 
         // Check if notifications are enabled for this task category
         switch task.category {
@@ -335,12 +365,21 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
     @MainActor
     private func completeTaskFromNotification(taskId: String) async {
         // Ensure we have a model context
-        guard let context = modelContext else {
-            print("Error: Model context not available for task completion")
+        guard let context = activeModelContext else {
+            print("Error: No active model context available for task completion")
+
+            // Store the task ID to complete it when the app becomes active
+            UserDefaults.standard.set(taskId, forKey: "pendingTaskCompletion")
+            UserDefaults.standard.set(Date(), forKey: "pendingTaskCompletionTimestamp")
+
+            // Activate the app to ensure the context becomes available
+            NSApplication.shared.activate(ignoringOtherApps: true)
             return
         }
 
         do {
+            print("Attempting to complete task with UUID: \(taskId)")
+
             // Try to find the task by its UUID
             if let task = try context.fetchTaskByUUID(taskId) {
                 // Mark the task as completed

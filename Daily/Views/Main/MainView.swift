@@ -73,6 +73,39 @@ struct MainView: View {
 
         // Check if we have a pending task ID from a notification
         checkForPendingNotificationTask()
+
+        // Check if we have a pending task completion
+        checkForPendingTaskCompletion()
+    }
+
+    /// Check for a pending task completion from a notification
+    private func checkForPendingTaskCompletion() {
+        // Check if we have a pending task completion
+        if let taskId = UserDefaults.standard.string(forKey: "pendingTaskCompletion"),
+           let timestamp = UserDefaults.standard.object(forKey: "pendingTaskCompletionTimestamp") as? Date {
+
+            // Only use pending completions from the last 30 seconds
+            if Date().timeIntervalSince(timestamp) < 30 {
+                print("Found pending task completion from notification: \(taskId)")
+
+                // Try to find and complete the task
+                do {
+                    if let task = try self.modelContext.fetchTaskByUUID(taskId) {
+                        print("Completing task from pending notification: \(task.title)")
+                        task.isCompleted = true
+                        try modelContext.save()
+                    } else {
+                        print("Could not find task with ID for completion: \(taskId)")
+                    }
+                } catch {
+                    print("Error completing pending task: \(error.localizedDescription)")
+                }
+            }
+
+            // Clear the pending task completion
+            UserDefaults.standard.removeObject(forKey: "pendingTaskCompletion")
+            UserDefaults.standard.removeObject(forKey: "pendingTaskCompletionTimestamp")
+        }
     }
 
     /// Check for a pending task ID from a notification and focus that task

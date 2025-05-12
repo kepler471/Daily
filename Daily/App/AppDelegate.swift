@@ -101,7 +101,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
         // Set up the model context for the notification manager
         let context = ModelContext(container)
-        notificationManager.modelContext = context
+        notificationManager.setModelContext(context)
+
+        // Print confirmation that model context is set
+        print("ModelContext set for NotificationManager")
 
         // No need to set up a popover - SwiftUI will handle window creation
     }
