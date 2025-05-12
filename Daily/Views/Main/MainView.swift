@@ -14,10 +14,10 @@ import SwiftData
 ///
 /// MainView serves as the main content view displayed in the application window.
 /// It manages:
-/// - Two columns of tasks (Required and Suggested)
-/// - Displaying task completion status
+/// - Two columns of todos (Required and Suggested)
+/// - Displaying todo completion status
 /// - Handling app notifications
-/// - Navigation to sheets and overlays for task management
+/// - Navigation to sheets and overlays for todo management
 struct MainView: View {
     // MARK: Environment & State
 
@@ -27,27 +27,27 @@ struct MainView: View {
     /// Access to the system settings API
     @Environment(\.openSettings) private var openSettings
 
-    /// Whether the add task sheet is being displayed
-    @State private var showingAddTask = false
+    /// Whether the add todo sheet is being displayed
+    @State private var showingAddTodo = false
 
-    /// Whether the completed required tasks overlay is being displayed
-    @State private var showingRequiredCompletedTasks = false
+    /// Whether the completed required todos overlay is being displayed
+    @State private var showingRequiredCompletedTodos = false
 
-    /// Whether the completed suggested tasks overlay is being displayed
-    @State private var showingSuggestedCompletedTasks = false
+    /// Whether the completed suggested todos overlay is being displayed
+    @State private var showingSuggestedCompletedTodos = false
 
-    /// Whether the focused task view is being displayed
-    @State private var showingFocusedTask = false
+    /// Whether the focused todo view is being displayed
+    @State private var showingFocusedTodo = false
 
-    /// The currently selected task for focused view
-    @State private var focusedTask: Task? = nil
+    /// The currently selected todo for focused view
+    @State private var focusedTodo: Todo? = nil
 
-    /// Access to the task reset functionality
-    @EnvironmentObject private var resetTaskManager: TaskResetManager
+    /// Access to the todo reset functionality
+    @EnvironmentObject private var resetTodoManager: TodoResetManager
 
-    /// Query for checking if there are any required tasks
-    @Query(filter: Task.Predicates.byCategoryAndCompletion(category: .required, isCompleted: false),
-           sort: [SortDescriptor(\Task.order)]) private var requiredTasks: [Task]
+    /// Query for checking if there are any required todos
+    @Query(filter: Todo.Predicates.byCategoryAndCompletion(category: .required, isCompleted: false),
+           sort: [SortDescriptor(\Todo.order)]) private var requiredTodos: [Todo]
 
     // MARK: - Initialization
 
@@ -61,8 +61,8 @@ struct MainView: View {
 
     /// Returns true if any overlay is currently being shown
     private var isAnyOverlayVisible: Bool {
-        showingAddTask || showingRequiredCompletedTasks ||
-        showingSuggestedCompletedTasks || showingFocusedTask
+        showingAddTodo || showingRequiredCompletedTodos ||
+        showingSuggestedCompletedTodos || showingFocusedTodo
     }
 
     // MARK: - Setup Methods
@@ -71,96 +71,96 @@ struct MainView: View {
     private func setupView() {
         setupNotificationHandlers()
 
-        // Check if we have a pending task ID from a notification
-        checkForPendingNotificationTask()
+        // Check if we have a pending todo ID from a notification
+        checkForPendingNotificationTodo()
 
-        // Check if we have a pending task completion
-        checkForPendingTaskCompletion()
+        // Check if we have a pending todo completion
+        checkForPendingTodoCompletion()
     }
 
-    /// Check for a pending task completion from a notification
-    private func checkForPendingTaskCompletion() {
-        // Check if we have a pending task completion
-        if let taskId = UserDefaults.standard.string(forKey: "pendingTaskCompletion"),
-           let timestamp = UserDefaults.standard.object(forKey: "pendingTaskCompletionTimestamp") as? Date {
+    /// Check for a pending todo completion from a notification
+    private func checkForPendingTodoCompletion() {
+        // Check if we have a pending todo completion
+        if let todoId = UserDefaults.standard.string(forKey: "pendingTodoCompletion"),
+           let timestamp = UserDefaults.standard.object(forKey: "pendingTodoCompletionTimestamp") as? Date {
 
             // Only use pending completions from the last 30 seconds
             if Date().timeIntervalSince(timestamp) < 30 {
-                print("Found pending task completion from notification: \(taskId)")
+                print("Found pending todo completion from notification: \(todoId)")
 
-                // Try to find and complete the task
+                // Try to find and complete the todo
                 do {
-                    if let task = try self.modelContext.fetchTaskByUUID(taskId) {
-                        print("Completing task from pending notification: \(task.title)")
-                        task.isCompleted = true
+                    if let todo = try self.modelContext.fetchTodoByUUID(todoId) {
+                        print("Completing todo from pending notification: \(todo.title)")
+                        todo.isCompleted = true
                         try modelContext.save()
                     } else {
-                        print("Could not find task with ID for completion: \(taskId)")
+                        print("Could not find todo with ID for completion: \(todoId)")
                     }
                 } catch {
-                    print("Error completing pending task: \(error.localizedDescription)")
+                    print("Error completing pending todo: \(error.localizedDescription)")
                 }
             }
 
-            // Clear the pending task completion
-            UserDefaults.standard.removeObject(forKey: "pendingTaskCompletion")
-            UserDefaults.standard.removeObject(forKey: "pendingTaskCompletionTimestamp")
+            // Clear the pending todo completion
+            UserDefaults.standard.removeObject(forKey: "pendingTodoCompletion")
+            UserDefaults.standard.removeObject(forKey: "pendingTodoCompletionTimestamp")
         }
     }
 
-    /// Check for a pending task ID from a notification and focus that task
-    private func checkForPendingNotificationTask() {
-        // Check if we have a pending task ID stored
-        if let taskId = UserDefaults.standard.string(forKey: "pendingTaskId"),
-           let timestamp = UserDefaults.standard.object(forKey: "pendingTaskIdTimestamp") as? Date {
+    /// Check for a pending todo ID from a notification and focus that todo
+    private func checkForPendingNotificationTodo() {
+        // Check if we have a pending todo ID stored
+        if let todoId = UserDefaults.standard.string(forKey: "pendingTodoId"),
+           let timestamp = UserDefaults.standard.object(forKey: "pendingTodoIdTimestamp") as? Date {
 
-            // Only use pending task IDs from the last 30 seconds
+            // Only use pending todo IDs from the last 30 seconds
             if Date().timeIntervalSince(timestamp) < 30 {
-                print("Found pending task ID from notification: \(taskId)")
+                print("Found pending todo ID from notification: \(todoId)")
 
-                // Try to find and focus the task
+                // Try to find and focus the todo
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     do {
-                        if let task = try self.modelContext.fetchTaskByUUID(taskId) {
-                            print("Focusing task from notification: \(task.title)")
-                            self.focusedTask = task
-                            self.showingFocusedTask = true
+                        if let todo = try self.modelContext.fetchTodoByUUID(todoId) {
+                            print("Focusing todo from notification: \(todo.title)")
+                            self.focusedTodo = todo
+                            self.showingFocusedTodo = true
 
-                            // Clear the pending task ID
-                            UserDefaults.standard.removeObject(forKey: "pendingTaskId")
-                            UserDefaults.standard.removeObject(forKey: "pendingTaskIdTimestamp")
+                            // Clear the pending todo ID
+                            UserDefaults.standard.removeObject(forKey: "pendingTodoId")
+                            UserDefaults.standard.removeObject(forKey: "pendingTodoIdTimestamp")
                             return
                         } else {
-                            print("Could not find task with ID: \(taskId)")
+                            print("Could not find todo with ID: \(todoId)")
                         }
                     } catch {
-                        print("Error finding task with ID \(taskId): \(error.localizedDescription)")
+                        print("Error finding todo with ID \(todoId): \(error.localizedDescription)")
                     }
 
-                    // Fallback to showing the top required task if the specific task wasn't found
-                    self.showDefaultFocusedTask()
+                    // Fallback to showing the top required todo if the specific todo wasn't found
+                    self.showDefaultFocusedTodo()
                 }
             } else {
-                // Timestamp is too old, show default focused task
-                showDefaultFocusedTask()
+                // Timestamp is too old, show default focused todo
+                showDefaultFocusedTodo()
 
-                // Clear the pending task ID
-                UserDefaults.standard.removeObject(forKey: "pendingTaskId")
-                UserDefaults.standard.removeObject(forKey: "pendingTaskIdTimestamp")
+                // Clear the pending todo ID
+                UserDefaults.standard.removeObject(forKey: "pendingTodoId")
+                UserDefaults.standard.removeObject(forKey: "pendingTodoIdTimestamp")
             }
         } else {
-            // No pending task ID, show default focused task
-            showDefaultFocusedTask()
+            // No pending todo ID, show default focused todo
+            showDefaultFocusedTodo()
         }
     }
 
-    /// Show the top required task in focused view
-    private func showDefaultFocusedTask() {
-        // Show focused task view on app launch if there are required tasks
-        if !requiredTasks.isEmpty {
+    /// Show the top required todo in focused view
+    private func showDefaultFocusedTodo() {
+        // Show focused todo view on app launch if there are required todos
+        if !requiredTodos.isEmpty {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.focusedTask = self.requiredTasks.first
-                self.showingFocusedTask = true
+                self.focusedTodo = self.requiredTodos.first
+                self.showingFocusedTodo = true
             }
         }
     }
@@ -169,33 +169,33 @@ struct MainView: View {
     private func setupNotificationHandlers() {
         // Set up notification observers for menu bar actions and keyboard shortcuts
 
-        // Show add task sheet notification
+        // Show add todo sheet notification
         NotificationCenter.default.addObserver(
-            forName: .showAddTaskSheet,
+            forName: .showAddTodoSheet,
             object: nil,
             queue: .main
         ) { _ in
-            self.showingAddTask = true
+            self.showingAddTodo = true
         }
 
-        // Show completed tasks notification
+        // Show completed todos notification
         NotificationCenter.default.addObserver(
-            forName: .showCompletedTasks,
+            forName: .showCompletedTodos,
             object: nil,
             queue: .main
         ) { _ in
-            // Show both required and suggested completed tasks
-            self.showingRequiredCompletedTasks = true
-            self.showingSuggestedCompletedTasks = true
+            // Show both required and suggested completed todos
+            self.showingRequiredCompletedTodos = true
+            self.showingSuggestedCompletedTodos = true
         }
 
-        // Reset tasks notification
+        // Reset todos notification
         NotificationCenter.default.addObserver(
-            forName: .resetTodaysTasks,
+            forName: .resetTodaysTodos,
             object: nil,
             queue: .main
         ) { _ in
-            self.resetTaskManager.resetAllTasks()
+            self.resetTodoManager.resetAllTodos()
         }
 
         // Open settings notification
@@ -207,40 +207,40 @@ struct MainView: View {
             self.openSettings()
         }
 
-        // Add notification for showing focused task view
+        // Add notification for showing focused todo view
         NotificationCenter.default.addObserver(
-            forName: .showFocusedTask,
+            forName: .showFocusedTodo,
             object: nil,
             queue: .main
         ) { _ in
-            self.focusedTask = self.requiredTasks.first
-            self.showingFocusedTask = true
+            self.focusedTodo = self.requiredTodos.first
+            self.showingFocusedTodo = true
         }
 
-        // Add notification for showing a specific task in focused view
+        // Add notification for showing a specific todo in focused view
         NotificationCenter.default.addObserver(
-            forName: .showFocusedTaskWithId,
+            forName: .showFocusedTodoWithId,
             object: nil,
             queue: .main
         ) { notification in
-            guard let taskId = notification.userInfo?["taskId"] as? String else {
-                print("No taskId found in notification userInfo")
+            guard let todoId = notification.userInfo?["todoId"] as? String else {
+                print("No todoId found in notification userInfo")
                 return
             }
 
-            print("Received notification to focus task with ID: \(taskId)")
+            print("Received notification to focus todo with ID: \(todoId)")
 
-            // Find the task with the given UUID and show it in focused view
+            // Find the todo with the given UUID and show it in focused view
             do {
-                if let task = try self.modelContext.fetchTaskByUUID(taskId) {
-                    print("Found task for notification: \(task.title)")
-                    self.focusedTask = task
-                    self.showingFocusedTask = true
+                if let todo = try self.modelContext.fetchTodoByUUID(todoId) {
+                    print("Found todo for notification: \(todo.title)")
+                    self.focusedTodo = todo
+                    self.showingFocusedTodo = true
                 } else {
-                    print("No task found with UUID \(taskId)")
+                    print("No todo found with UUID \(todoId)")
                 }
             } catch {
-                print("Error finding task with UUID \(taskId): \(error.localizedDescription)")
+                print("Error finding todo with UUID \(todoId): \(error.localizedDescription)")
             }
         }
     }
@@ -251,19 +251,19 @@ struct MainView: View {
         ZStack(alignment: .top) {
             // MARK: Main Content Area
             
-            // Task columns layout
+            // Todo columns layout
             HStack(spacing: 0) {
-                // Required Tasks Column
-                TaskStackView(category: .required, verticalOffset: 20, scale: 0.85, onTaskSelected: { task in
-                    focusedTask = task
-                    showingFocusedTask = true
+                // Required Todos Column
+                TodoStackView(category: .required, verticalOffset: 20, scale: 0.85, onTodoSelected: { todo in
+                    focusedTodo = todo
+                    showingFocusedTodo = true
                 })
                 .frame(minWidth: 0, maxWidth: .infinity)
 
-                // Suggested Tasks Column
-                TaskStackView(category: .suggested, verticalOffset: 20, scale: 0.85, onTaskSelected: { task in
-                    focusedTask = task
-                    showingFocusedTask = true
+                // Suggested Todos Column
+                TodoStackView(category: .suggested, verticalOffset: 20, scale: 0.85, onTodoSelected: { todo in
+                    focusedTodo = todo
+                    showingFocusedTodo = true
                 })
                 .frame(minWidth: 0, maxWidth: .infinity)
             }
@@ -274,7 +274,7 @@ struct MainView: View {
             // Fixed top control bar
             VStack(spacing: 0) {
                 HStack(spacing: 0) {
-                    // Left half - Required tasks
+                    // Left half - Required todos
                     HStack {
                         Spacer()
                         
@@ -286,12 +286,12 @@ struct MainView: View {
                         Spacer()
                         
                         // Counter right aligned
-                        TaskCounterView(category: .required, showCompletedTasks: $showingRequiredCompletedTasks)
+                        TodoCounterView(category: .required, showCompletedTodos: $showingRequiredCompletedTodos)
                     }
                     .frame(minWidth: 0, maxWidth: .infinity)
                     .padding(.horizontal)
                     
-                    // Right half - Suggested tasks
+                    // Right half - Suggested todos
                     HStack {
                         Spacer()
                         
@@ -303,7 +303,7 @@ struct MainView: View {
                         Spacer()
                         
                         // Counter right aligned
-                        TaskCounterView(category: .suggested, showCompletedTasks: $showingSuggestedCompletedTasks)
+                        TodoCounterView(category: .suggested, showCompletedTodos: $showingSuggestedCompletedTodos)
                     }
                     .frame(minWidth: 0, maxWidth: .infinity)
                     .padding(.horizontal)
@@ -318,39 +318,39 @@ struct MainView: View {
             
             // MARK: Overlays
 
-            // Completed tasks overlay for Required category
-            if showingRequiredCompletedTasks {
-                CompletedTaskView(category: .required, isPresented: $showingRequiredCompletedTasks)
+            // Completed todos overlay for Required category
+            if showingRequiredCompletedTodos {
+                CompletedTodoView(category: .required, isPresented: $showingRequiredCompletedTodos)
                     .transition(.opacity)
                     .zIndex(100)
             }
 
-            // Completed tasks overlay for Suggested category
-            if showingSuggestedCompletedTasks {
-                CompletedTaskView(category: .suggested, isPresented: $showingSuggestedCompletedTasks)
+            // Completed todos overlay for Suggested category
+            if showingSuggestedCompletedTodos {
+                CompletedTodoView(category: .suggested, isPresented: $showingSuggestedCompletedTodos)
                     .transition(.opacity)
                     .zIndex(100)
             }
 
-            // Focused task overlay
-            if showingFocusedTask {
-                FocusedTaskView(task: focusedTask, isPresented: $showingFocusedTask)
+            // Focused todo overlay
+            if showingFocusedTodo {
+                FocusedTodoView(todo: focusedTodo, isPresented: $showingFocusedTodo)
                     .transition(.opacity)
                     .zIndex(100)
             }
 
-            // Add task overlay
-            if showingAddTask {
-                AddTaskView(isPresented: $showingAddTask)
+            // Add todo overlay
+            if showingAddTodo {
+                AddTodoView(isPresented: $showingAddTodo)
                     .transition(.opacity)
                     .zIndex(100)
             }
         }
         // MARK: View Modifiers
 
-        // Add Task Button in top left corner
+        // Add Todo Button in top left corner
         .overlay(
-            AddTaskButtonView(showingAddTask: $showingAddTask)
+            AddTodoButtonView(showingAddTodo: $showingAddTodo)
                 .padding([.top], 16)
                 .padding([.leading], 16)
                 .hideWhenOverlay(isAnyOverlayVisible),
@@ -358,10 +358,10 @@ struct MainView: View {
         )
 
         // Animation modifiers
-        .animation(.easeInOut(duration: 0.3), value: showingAddTask)
-        .animation(.easeInOut(duration: 0.3), value: showingRequiredCompletedTasks)
-        .animation(.easeInOut(duration: 0.3), value: showingSuggestedCompletedTasks)
-        .animation(.easeInOut(duration: 0.3), value: showingFocusedTask)
+        .animation(.easeInOut(duration: 0.3), value: showingAddTodo)
+        .animation(.easeInOut(duration: 0.3), value: showingRequiredCompletedTodos)
+        .animation(.easeInOut(duration: 0.3), value: showingSuggestedCompletedTodos)
+        .animation(.easeInOut(duration: 0.3), value: showingFocusedTodo)
         .onAppear {
             setupView()
         }
@@ -386,14 +386,14 @@ extension View {
 #Preview("Light Mode") {
     MainView()
         .preferredColorScheme(.light)
-        .modelContainer(TaskMockData.createPreviewContainer())
+        .modelContainer(TodoMockData.createPreviewContainer())
         .frame(width: 800, height: 600)
 }
 
 #Preview("Dark Mode") {
     MainView()
         .preferredColorScheme(.dark)
-        .modelContainer(TaskMockData.createPreviewContainer())
+        .modelContainer(TodoMockData.createPreviewContainer())
         .frame(width: 800, height: 600)
 }
 

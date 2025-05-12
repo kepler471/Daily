@@ -96,7 +96,53 @@ Each day, task completion statuses can be reset to start fresh.
 
 ## Future Plans
 
-- iOS support with iCloud sync
-- Widget support for macOS
-- Smart task scheduling and prioritization
-- Progress trends and analytics
+### Current Priorities
+- [ ] Notifications
+- [ ] Focus timer
+- [ ] Do not disturb activation, sync with timer
+- [x] Stop the blank window opening on launch
+- [ ] Show a more persistent notification
+- [ ] Use a custom notification sound
+- [ ] Can we include icons in the notification?
+- [ ] Bring settings window to the front
+- [ ] Settings sizing wraps to content, no need to scroll
+- [ ] allow ⌘-w for window close, and try adding other common bindings for the app
+- [ ] Seems like daily reset deletes all tasks?
+- [ ] Enter from add task view should work
+
+### Advanced Features
+- [ ] Task Sorting and Filtering (by priority, due date, title)
+- [ ] Search Functionality with history
+- [ ] Expanded Keyboard Shortcuts with visual hints
+- [ ] Statistics and Insights Dashboard
+- [ ] Drag and Drop Task Reordering
+- [ ] Task Reminders and Time Blocking
+- [ ] Dark/Light Mode Toggle
+- [ ] Task Tags and Color Coding
+- [ ] Task Notes and Attachments
+- [ ] Task Sharing and Collaboration
+
+### Platform Expansion
+- [ ] iOS support with iCloud sync
+- [ ] Widget support for macOS
+- [ ] Smart task scheduling and prioritization
+- [ ] Progress trends and analytics
+- [ ] Time sensitive notifications - https://developer.apple.com/design/human-interface-guidelines/managing-notifications
+
+# Database Reset Utility
+This utility is a
+  crucial part of our notification system implementation as it helps handle database
+  migration issues that may occur during development or app updates.
+
+  Key features of the DatabaseResetUtility:
+
+  1. Database Reset Functionality: It can safely delete corrupted database files when
+  migration errors occur, allowing the app to create a fresh database.
+  2. In-Memory Fallback: If the persistent storage completely fails, it provides an
+  in-memory container as a last resort to prevent app crashes.
+  3. Thorough Cleanup: It properly cleans up all related database files to ensure a complete
+   reset.
+  4. Safe Error Handling: Includes detailed error reporting and safe deletion operations.
+
+  This is an important reliability enhancement for the Daily app, ensuring that users don't
+  experience crashes due to database schema changes or corruption.

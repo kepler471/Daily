@@ -8,7 +8,7 @@
 import SwiftUI
 import SwiftData
 
-/// A button view that allows users to reset all data and recreate sample tasks
+/// A button view that allows users to reset all data and recreate sample todos
 struct ResetDataView: View {
     // MARK: - Properties
     
@@ -33,19 +33,19 @@ struct ResetDataView: View {
         }
         .help("Reset all data to default")
         .accessibilityLabel("Reset all data")
-        .accessibilityHint("Deletes all tasks and recreates sample data")
+        .accessibilityHint("Deletes all todos and recreates sample data")
     }
     
     // MARK: - Data Operations
     
-    /// Resets all data by deleting all tasks and recreating sample tasks
+    /// Resets all data by deleting all todos and recreating sample todos
     private func resetData() {
-        // Delete all tasks
+        // Delete all todos
         do {
-            try modelContext.delete(model: Task.self)
+            try modelContext.delete(model: Todo.self)
             
             // Re-add sample data
-            try TaskMockData.createSampleTasks(in: modelContext)
+            try TodoMockData.createSampleTodos(in: modelContext)
             
             // Call the onReset callback if provided
             onReset?()

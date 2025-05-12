@@ -12,7 +12,7 @@ import UserNotifications
 ///
 /// SettingsView manages configuration options for the application, including:
 /// - Launch at login behavior
-/// - Task reset scheduling
+/// - Todo reset scheduling
 /// - Notification preferences
 /// - Options to restore default settings
 struct SettingsView: View {
@@ -64,7 +64,7 @@ struct SettingsView: View {
                             Text("Launch at Login")
                                 .font(.headline)
                             
-                            Text("When enabled, Daily will automatically start when you log in to your Mac. This ensures your tasks are always available throughout your workday.")
+                            Text("When enabled, Daily will automatically start when you log in to your Mac. This ensures your todos are always available throughout your workday.")
                                 .font(.body)
                                 .fixedSize(horizontal: false, vertical: true)
                             
@@ -81,11 +81,11 @@ struct SettingsView: View {
                 }
             }
             
-            // MARK: Task Reset Settings
+            // MARK: Todo Reset Settings
 
-            Section(header: Text("Task Reset")) {
+            Section(header: Text("Todo Reset")) {
                 HStack {
-                    Text("Reset tasks daily at:")
+                    Text("Reset todos daily at:")
 
                     Spacer()
 
@@ -99,7 +99,7 @@ struct SettingsView: View {
                     .accessibilityIdentifier("resetHourPicker")
                 }
 
-                Text("Tasks will reset automatically at the specified time each day.")
+                Text("Todos will reset automatically at the specified time each day.")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -108,9 +108,9 @@ struct SettingsView: View {
 
             Section(header: Text("Notifications")) {
                 HStack {
-                    Toggle("Required Tasks", isOn: $settingsManager.requiredTaskNotificationsEnabled)
+                    Toggle("Required Todos", isOn: $settingsManager.requiredTodoNotificationsEnabled)
                         .toggleStyle(.switch)
-                        .accessibilityIdentifier("requiredTaskNotificationsToggle")
+                        .accessibilityIdentifier("requiredTodoNotificationsToggle")
 
                     Spacer()
 
@@ -124,10 +124,10 @@ struct SettingsView: View {
                     .accessibilityLabel("Notifications help")
                     .popover(isPresented: $showingNotificationExplanation, arrowEdge: .top) {
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("Task Notifications")
+                            Text("Todo Notifications")
                                 .font(.headline)
 
-                            Text("Daily can remind you about your tasks at their scheduled times. Enable notifications for the tasks you want to be reminded about.")
+                            Text("Daily can remind you about your todos at their scheduled times. Enable notifications for the todos you want to be reminded about.")
                                 .font(.body)
                                 .fixedSize(horizontal: false, vertical: true)
 
@@ -143,9 +143,9 @@ struct SettingsView: View {
                     }
                 }
 
-                Toggle("Suggested Tasks", isOn: $settingsManager.suggestedTaskNotificationsEnabled)
+                Toggle("Suggested Todos", isOn: $settingsManager.suggestedTodoNotificationsEnabled)
                     .toggleStyle(.switch)
-                    .accessibilityIdentifier("suggestedTaskNotificationsToggle")
+                    .accessibilityIdentifier("suggestedTodoNotificationsToggle")
 
                 HStack {
                     Spacer()

@@ -12,14 +12,14 @@ import AppKit
 
 /// Extension for centralizing notification names used in the app
 extension Notification.Name {
-    /// Notification to show the add task sheet
-    static let showAddTaskSheet = Notification.Name("ShowAddTaskSheet")
+    /// Notification to show the add todo sheet
+    static let showAddTodoSheet = Notification.Name("ShowAddTodoSheet")
 
-    /// Notification to show completed tasks view
-    static let showCompletedTasks = Notification.Name("ShowCompletedTasks")
+    /// Notification to show completed todos view
+    static let showCompletedTodos = Notification.Name("ShowCompletedTodos")
 
-    /// Notification to reset today's tasks
-    static let resetTodaysTasks = Notification.Name("ResetTodaysTasks")
+    /// Notification to reset today's todos
+    static let resetTodaysTodos = Notification.Name("ResetTodaysTodos")
 
     /// Notification to open settings using SwiftUI's SettingsLink
     static let openSettingsWithLink = Notification.Name("OpenSettingsWithLink")
@@ -27,11 +27,14 @@ extension Notification.Name {
     /// Notification to open the main app interface
     static let openDailyApp = Notification.Name("OpenDailyApp")
 
-    /// Notification to show the focused task view
-    static let showFocusedTask = Notification.Name("ShowFocusedTask")
+    /// Notification to show the focused todo view
+    static let showFocusedTodo = Notification.Name("ShowFocusedTodo")
 
-    /// Notification to show a specific task in the focused task view
-    static let showFocusedTaskWithId = Notification.Name("ShowFocusedTaskWithId")
+    /// Notification to show a specific todo in the focused todo view
+    static let showFocusedTodoWithId = Notification.Name("ShowFocusedTodoWithId")
+
+    /// Notification to indicate a todo was completed from outside the TodoStackView
+    static let todoCompletedExternally = Notification.Name("TodoCompletedExternally")
 }
 
 // MARK: - Application Menu Manager
@@ -76,29 +79,29 @@ class AppMenuManager: NSObject {
         let quitItem = NSMenuItem(title: "Quit Daily", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appMenu.addItem(quitItem)
 
-        // 2. Tasks menu
-        let tasksMenu = NSMenu(title: "Tasks")
-        let tasksMenuItem = NSMenuItem(title: "Tasks", action: nil, keyEquivalent: "")
-        tasksMenuItem.submenu = tasksMenu
+        // 2. Todos menu
+        let todosMenu = NSMenu(title: "Todos")
+        let todosMenuItem = NSMenuItem(title: "Todos", action: nil, keyEquivalent: "")
+        todosMenuItem.submenu = todosMenu
 
-        // Add items to the tasks menu
-        let addTaskItem = NSMenuItem(title: "Add Task", action: #selector(addNewTask), keyEquivalent: "n")
-        addTaskItem.target = self
-        tasksMenu.addItem(addTaskItem)
+        // Add items to the todos menu
+        let addTodoItem = NSMenuItem(title: "Add Todo", action: #selector(addNewTodo), keyEquivalent: "n")
+        addTodoItem.target = self
+        todosMenu.addItem(addTodoItem)
 
-        let focusedTaskItem = NSMenuItem(title: "Focus on Top Task", action: #selector(showFocusedTask), keyEquivalent: "f")
-        focusedTaskItem.target = self
-        tasksMenu.addItem(focusedTaskItem)
+        let focusedTodoItem = NSMenuItem(title: "Focus on Top Todo", action: #selector(showFocusedTodo), keyEquivalent: "f")
+        focusedTodoItem.target = self
+        todosMenu.addItem(focusedTodoItem)
 
-        let completedItem = NSMenuItem(title: "Show Completed Tasks", action: #selector(showCompletedTasks), keyEquivalent: "c")
+        let completedItem = NSMenuItem(title: "Show Completed Todos", action: #selector(showCompletedTodos), keyEquivalent: "c")
         completedItem.target = self
-        tasksMenu.addItem(completedItem)
+        todosMenu.addItem(completedItem)
 
-        tasksMenu.addItem(NSMenuItem.separator())
+        todosMenu.addItem(NSMenuItem.separator())
 
-        let resetItem = NSMenuItem(title: "Reset Today's Tasks", action: #selector(resetTasks), keyEquivalent: "r")
+        let resetItem = NSMenuItem(title: "Reset Today's Todos", action: #selector(resetTodos), keyEquivalent: "r")
         resetItem.target = self
-        tasksMenu.addItem(resetItem)
+        todosMenu.addItem(resetItem)
 
         // 3. Edit menu (standard)
         let editMenu = NSMenu(title: "Edit")
@@ -127,7 +130,7 @@ class AppMenuManager: NSObject {
         // Add menu items to main menu
         mainMenu.addItem(appMenuItem)
         mainMenu.addItem(editMenuItem)
-        mainMenu.addItem(tasksMenuItem)
+        mainMenu.addItem(todosMenuItem)
         mainMenu.addItem(windowMenuItem)
 
         // Set as the application's main menu
@@ -139,28 +142,28 @@ class AppMenuManager: NSObject {
 
     // MARK: - Menu Action Handlers
 
-    /// Shows the add task sheet by posting a notification
-    @objc private func addNewTask() {
-        // Post notification to trigger add task sheet
-        NotificationCenter.default.post(name: .showAddTaskSheet, object: nil)
+    /// Shows the add todo sheet by posting a notification
+    @objc private func addNewTodo() {
+        // Post notification to trigger add todo sheet
+        NotificationCenter.default.post(name: .showAddTodoSheet, object: nil)
     }
 
-    /// Shows the completed tasks view by posting a notification
-    @objc private func showCompletedTasks() {
-        // Post notification to show completed tasks
-        NotificationCenter.default.post(name: .showCompletedTasks, object: nil)
+    /// Shows the completed todos view by posting a notification
+    @objc private func showCompletedTodos() {
+        // Post notification to show completed todos
+        NotificationCenter.default.post(name: .showCompletedTodos, object: nil)
     }
 
-    /// Shows the focused task view by posting a notification
-    @objc private func showFocusedTask() {
-        // Post notification to show focused task view
-        NotificationCenter.default.post(name: .showFocusedTask, object: nil)
+    /// Shows the focused todo view by posting a notification
+    @objc private func showFocusedTodo() {
+        // Post notification to show focused todo view
+        NotificationCenter.default.post(name: .showFocusedTodo, object: nil)
     }
 
-    /// Resets all tasks to incomplete by posting a notification
-    @objc private func resetTasks() {
-        // Post notification to reset today's tasks
-        NotificationCenter.default.post(name: .resetTodaysTasks, object: nil)
+    /// Resets all todos to incomplete by posting a notification
+    @objc private func resetTodos() {
+        // Post notification to reset today's todos
+        NotificationCenter.default.post(name: .resetTodaysTodos, object: nil)
     }
 
     /// Opens the settings window using SwiftUI's SettingsLink API

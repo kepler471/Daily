@@ -15,15 +15,15 @@ import AppKit
 ///
 /// DailyApp sets up the core infrastructure including:
 /// - Model container for data persistence using SwiftData
-/// - State management through TaskResetManager and SettingsManager
+/// - State management through TodoResetManager and SettingsManager
 /// - Application behavior through AppDelegate and AppMenuManager
 /// - Application scenes and window behavior
 @main
 struct DailyApp: App {
     // MARK: Properties
     
-    /// Manager for handling task reset functionality
-    @StateObject private var taskResetManager: TaskResetManager
+    /// Manager for handling todo reset functionality
+    @StateObject private var todoResetManager: TodoResetManager
     
     /// Manager for app settings and preferences
     @StateObject private var settingsManager = SettingsManager()
@@ -37,7 +37,7 @@ struct DailyApp: App {
     var sharedModelContainer: ModelContainer = {
         // Define the data schema
         let schema = Schema([
-            Task.self,
+            Todo.self,
         ])
         
         // Configure the model with persistent storage
@@ -52,9 +52,9 @@ struct DailyApp: App {
             // Create the container with the config
             let container = try ModelContainer(for: schema, configurations: [modelConfiguration])
             
-            // Add sample tasks if the container is empty (for development purposes)
+            // Add sample todos if the container is empty (for development purposes)
             let context = ModelContext(container)
-            try TaskMockData.createSampleTasks(in: context)
+            try TodoMockData.createSampleTodos(in: context)
             
             return container
         } catch {
@@ -67,7 +67,7 @@ struct DailyApp: App {
             do {
                 let container = try ModelContainer(for: schema, configurations: [configuration])
                 let context = ModelContext(container)
-                try TaskMockData.createSampleTasks(in: context)
+                try TodoMockData.createSampleTodos(in: context)
                 return container
             } catch {
                 fatalError("Could not create ModelContainer: \(error)")
@@ -79,12 +79,12 @@ struct DailyApp: App {
     
     /// Initialize the app with all required dependencies
     init() {
-        // Create the model context and task reset manager
+        // Create the model context and todo reset manager
         let context = ModelContext(sharedModelContainer)
-        let manager = TaskResetManager(modelContext: context)
+        let manager = TodoResetManager(modelContext: context)
         
         // Initialize the state object
-        _taskResetManager = StateObject(wrappedValue: manager)
+        _todoResetManager = StateObject(wrappedValue: manager)
         
         // Initialize the app delegate with necessary dependencies
         _appDelegate = NSApplicationDelegateAdaptor(AppDelegate.self)
@@ -99,7 +99,7 @@ struct DailyApp: App {
     func onAppear() {
         // Pass the dependencies to the app delegate
         appDelegate.modelContainer = sharedModelContainer
-        appDelegate.taskResetManager = taskResetManager
+        appDelegate.todoResetManager = todoResetManager
         appDelegate.settingsManager = settingsManager
         
         // Configure the popover with the model context after we've passed the dependencies
@@ -113,9 +113,9 @@ struct DailyApp: App {
         // MARK: Main Window Group
         WindowGroup {
             MainView()
-                .environmentObject(taskResetManager) // Make available throughout the app
+                .environmentObject(todoResetManager) // Make available throughout the app
                 .environmentObject(settingsManager) // Make settings available throughout the app
-                .environment(\.resetTaskManager, taskResetManager) // Provide via environment key
+                .environment(\.resetTodoManager, todoResetManager) // Provide via environment key
                 .onAppear {
                     onAppear()
                 }

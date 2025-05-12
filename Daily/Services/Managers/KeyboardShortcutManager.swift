@@ -35,16 +35,16 @@ class KeyboardShortcutManager: NSObject {
         // Register all the shortcuts that match the menu items
         shortcuts = [
             KeyboardShortcut(key: "f", modifiers: [.command], action: {
-                NotificationCenter.default.post(name: .showFocusedTask, object: nil)
+                NotificationCenter.default.post(name: .showFocusedTodo, object: nil)
             }),
             KeyboardShortcut(key: "n", modifiers: [.command], action: {
-                NotificationCenter.default.post(name: .showAddTaskSheet, object: nil)
+                NotificationCenter.default.post(name: .showAddTodoSheet, object: nil)
             }),
             KeyboardShortcut(key: "c", modifiers: [.command], action: {
-                NotificationCenter.default.post(name: .showCompletedTasks, object: nil)
+                NotificationCenter.default.post(name: .showCompletedTodos, object: nil)
             }),
             KeyboardShortcut(key: "r", modifiers: [.command], action: {
-                NotificationCenter.default.post(name: .resetTodaysTasks, object: nil)
+                NotificationCenter.default.post(name: .resetTodaysTodos, object: nil)
             }),
             KeyboardShortcut(key: ",", modifiers: [.command], action: {
                 NotificationCenter.default.post(name: .openSettingsWithLink, object: nil)

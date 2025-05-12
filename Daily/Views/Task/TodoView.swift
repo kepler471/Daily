@@ -1,5 +1,5 @@
 //
-//  TaskCardView.swift
+//  TodoCardView.swift
 //  Daily
 //
 //  Created by Stelios Georgiou on 05/05/2025.
@@ -9,20 +9,20 @@ import SwiftUI
 import SwiftData
 import UserNotifications
 
-// MARK: - Task Card View
+// MARK: - Todo Card View
 
-/// A card view that displays a single task with its details and actions
+/// A card view that displays a single todo with its details and actions
 ///
-/// TaskCardView is responsible for:
-/// - Displaying the task's title, category, and scheduled time (if any)
-/// - Showing a different visual appearance for completed vs. incomplete tasks
-/// - Providing a button to toggle the task's completion status
-/// - Creating a visually attractive card with appropriate styling based on task properties
+/// TodoCardView is responsible for:
+/// - Displaying the todo's title, category, and scheduled time (if any)
+/// - Showing a different visual appearance for completed vs. incomplete todos
+/// - Providing a button to toggle the todo's completion status
+/// - Creating a visually attractive card with appropriate styling based on todo properties
 struct TodoView: View {
     // MARK: Properties
 
-    /// The task to display, using @Bindable for two-way binding
-    @Bindable var task: Todo
+    /// The todo to display, using @Bindable for two-way binding
+    @Bindable var todo: Todo
 
     /// Settings manager for notification preferences
     @EnvironmentObject private var settingsManager: SettingsManager
@@ -36,18 +36,18 @@ struct TodoView: View {
         VStack(alignment: .leading, spacing: 12) {
             // MARK: Header Row
             
-            // Task title and metadata in a row
+            // Todo title and metadata in a row
             HStack {
-                // Task title with strikethrough when completed
-                Text(task.title)
+                // Todo title with strikethrough when completed
+                Text(todo.title)
                     .font(.headline)
-                    .foregroundColor(task.isCompleted ? .secondary : .primary)
-                    .strikethrough(task.isCompleted)
+                    .foregroundColor(todo.isCompleted ? .secondary : .primary)
+                    .strikethrough(todo.isCompleted)
                 
                 Spacer()
                 
                 // Scheduled time with clock icon (if available)
-                if let scheduledTime = task.scheduledTime {
+                if let scheduledTime = todo.scheduledTime {
                     HStack {
                         Image(systemName: "clock")
                             .foregroundColor(.secondary)
@@ -86,26 +86,26 @@ struct TodoView: View {
     
     // MARK: - UI Components
     
-    /// Background for the card that changes based on task completion status
+    /// Background for the card that changes based on todo completion status
     private var cardBackground: some View {
         Group {
-            if task.isCompleted {
-                // Completed task style - faded with gray border
+            if todo.isCompleted {
+                // Completed todo style - faded with gray border
                 Color(.windowBackgroundColor).opacity(0.8)
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(Color.gray.opacity(0.3), lineWidth: 1)
                     )
             } else {
-                // Active task style - gradient border based on category
+                // Active todo style - gradient border based on category
                 Color(.windowBackgroundColor)
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(
                                 LinearGradient(
                                     colors: [
-                                        task.category == .required ? .blue.opacity(0.5) : .purple.opacity(0.5),
-                                        task.category == .required ? .teal.opacity(0.3) : .pink.opacity(0.3)
+                                        todo.category == .required ? .blue.opacity(0.5) : .purple.opacity(0.5),
+                                        todo.category == .required ? .teal.opacity(0.3) : .pink.opacity(0.3)
                                     ],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
@@ -117,35 +117,35 @@ struct TodoView: View {
         }
     }
     
-    /// Badge that displays the task category (Required/Suggested)
+    /// Badge that displays the todo category (Required/Suggested)
     private var categoryBadge: some View {
-        Text(task.category == .required ? "Required" : "Suggested")
+        Text(todo.category == .required ? "Required" : "Suggested")
             .font(.caption)
             .fontWeight(.medium)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(
                 Capsule()
-                    .fill(task.category == .required ? Color.blue.opacity(0.2) : Color.purple.opacity(0.2))
+                    .fill(todo.category == .required ? Color.blue.opacity(0.2) : Color.purple.opacity(0.2))
             )
-            .foregroundColor(task.category == .required ? .blue : .purple)
+            .foregroundColor(todo.category == .required ? .blue : .purple)
     }
     
-    /// Button for toggling task completion status
+    /// Button for toggling todo completion status
     private var completionButton: some View {
         Button(action: onToggleComplete) {
             HStack(spacing: 4) {
-                Image(systemName: task.isCompleted ? "arrow.uturn.backward.circle" : "checkmark.circle")
-                Text(task.isCompleted ? "Reopen" : "Complete")
+                Image(systemName: todo.isCompleted ? "arrow.uturn.backward.circle" : "checkmark.circle")
+                Text(todo.isCompleted ? "Reopen" : "Complete")
             }
             .font(.footnote)
             .fontWeight(.medium)
-            .foregroundColor(task.isCompleted ? .orange : .green)
+            .foregroundColor(todo.isCompleted ? .orange : .green)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .background(
                 Capsule()
-                    .fill(task.isCompleted ? Color.orange.opacity(0.1) : Color.green.opacity(0.1))
+                    .fill(todo.isCompleted ? Color.orange.opacity(0.1) : Color.green.opacity(0.1))
             )
         }
     }
@@ -153,18 +153,18 @@ struct TodoView: View {
 
 // MARK: - Previews
 
-#Preview("Task Card") {
-    let container = TaskMockData.createPreviewContainer()
+#Preview("Todo Card") {
+    let container = TodoMockData.createPreviewContainer()
     let context = ModelContext(container)
-    let task = Todo(
+    let todo = Todo(
         title: "Morning Meditation",
         order: 1,
         category: .required,
         scheduledTime: Calendar.current.date(bySettingHour: 7, minute: 30, second: 0, of: Date())
     )
-    context.insert(task)
+    context.insert(todo)
 
-    return TodoView(task: task, onToggleComplete: {})
+    return TodoView(todo: todo, onToggleComplete: {})
         .frame(width: 350)
         .padding()
         .environmentObject(SettingsManager())

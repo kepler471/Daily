@@ -1,5 +1,5 @@
 //
-//  FocusedTaskView.swift
+//  FocusedTodoView.swift
 //  Daily
 //
 //  Created by Stelios Georgiou on 09/05/2025.
@@ -8,43 +8,43 @@
 import SwiftUI
 import SwiftData
 
-// MARK: - Focused Task View
+// MARK: - Focused Todo View
 
-/// A fullscreen overlay view that displays a task in detail
+/// A fullscreen overlay view that displays a todo in detail
 ///
-/// FocusedTaskView provides a modal interface for:
-/// - Viewing a task in detail
-/// - Marking the task as complete
-/// - Interacting with the task with visual feedback
+/// FocusedTodoView provides a modal interface for:
+/// - Viewing a todo in detail
+/// - Marking the todo as complete
+/// - Interacting with the todo with visual feedback
 struct FocusedTodoView: View {
     // MARK: Properties
 
-    /// Database context for saving task changes
+    /// Database context for saving todo changes
     @Environment(\.modelContext) private var modelContext
 
-    /// The specific task to display, or nil to show the top required task
-    var selectedTask: Todo?
+    /// The specific todo to display, or nil to show the top required todo
+    var selectedTodo: Todo?
 
-    /// Live query for required tasks, sorted by order (used when no specific task is provided)
-    @Query private var requiredTasks: [Todo]
+    /// Live query for required todos, sorted by order (used when no specific todo is provided)
+    @Query private var requiredTodos: [Todo]
 
     /// Binding to control the visibility of this view
     @Binding var isPresented: Bool
 
-    /// Tracks if the task is being hovered for hover effects
+    /// Tracks if the todo is being hovered for hover effects
     @State private var isHovered: Bool = false
 
-    /// Whether the edit task view is being displayed
-    @State private var showingEditTask: Bool = false
+    /// Whether the edit todo view is being displayed
+    @State private var showingEditTodo: Bool = false
 
     // MARK: - Initialization
 
-    /// Creates a new focused task view that shows a specific task or the top required task
+    /// Creates a new focused todo view that shows a specific todo or the top required todo
     /// - Parameters:
-    ///   - task: Optional specific task to display
+    ///   - todo: Optional specific todo to display
     ///   - isPresented: Binding to control the visibility of the view
-    init(task: Todo? = nil, isPresented: Binding<Bool>) {
-        self.selectedTask = task
+    init(todo: Todo? = nil, isPresented: Binding<Bool>) {
+        self.selectedTodo = todo
         self._isPresented = isPresented
 
         // Configure sorting to ensure consistent display order
@@ -53,8 +53,8 @@ struct FocusedTodoView: View {
             SortDescriptor(\Todo.createdAt)
         ]
 
-        // Query to get required tasks that are not completed
-        _requiredTasks = Query(
+        // Query to get required todos that are not completed
+        _requiredTodos = Query(
             filter: Todo.Predicates.byCategoryAndCompletion(category: .required, isCompleted: false),
             sort: sortDescriptors
         )
@@ -62,9 +62,9 @@ struct FocusedTodoView: View {
 
     // MARK: - Computed Properties
 
-    /// Returns the task to display - either the selected task or the top required task
-    private var taskToDisplay: Todo? {
-        return selectedTask ?? requiredTasks.first
+    /// Returns the todo to display - either the selected todo or the top required todo
+    private var todoToDisplay: Todo? {
+        return selectedTodo ?? requiredTodos.first
     }
     
     // MARK: - View Body
@@ -86,11 +86,11 @@ struct FocusedTodoView: View {
             // MARK: Content
 
             VStack(spacing: 20) {
-                // MARK: Task Display
+                // MARK: Todo Display
 
-                if let task = taskToDisplay {
-                    // Display the task
-                    focusedTaskCard(for: task)
+                if let todo = todoToDisplay {
+                    // Display the todo
+                    focusedTodoCard(for: todo)
                         .scaleEffect(isHovered ? 1.05 : 1.0)
                         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isHovered)
                         .onHover { hovering in
@@ -101,7 +101,7 @@ struct FocusedTodoView: View {
                 } else {
                     // Empty state
                     Spacer()
-                    Text("No required tasks")
+                    Text("No required todos")
                         .font(.title2)
                         .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity, alignment: .center)
@@ -111,12 +111,12 @@ struct FocusedTodoView: View {
             .padding(.top, 40)
         }
         .overlay {
-            if let task = taskToDisplay, showingEditTask {
-                EditTaskView(task: task, isPresented: $showingEditTask)
+            if let todo = todoToDisplay, showingEditTodo {
+                EditTodoView(todo: todo, isPresented: $showingEditTodo)
                     .transition(.opacity)
             }
         }
-        .animation(.easeInOut(duration: 0.3), value: showingEditTask)
+        .animation(.easeInOut(duration: 0.3), value: showingEditTodo)
         .withCloseButton(
             action: { isPresented = false },
             size: 36,           // Bigger button (default is 28)
@@ -124,25 +124,25 @@ struct FocusedTodoView: View {
         )
     }
     
-    // MARK: - Task Card View
+    // MARK: - Todo Card View
     
-    /// Creates a card view for the focused task
-    /// - Parameter task: The task to display
-    /// - Returns: A SwiftUI view representing the task card
+    /// Creates a card view for the focused todo
+    /// - Parameter todo: The todo to display
+    /// - Returns: A SwiftUI view representing the todo card
     @ViewBuilder
-    private func focusedTaskCard(for task: Todo) -> some View {
+    private func focusedTodoCard(for todo: Todo) -> some View {
         VStack(spacing: 20) {
-            // MARK: Task Details
+            // MARK: Todo Details
             
-            // Task title and scheduled time (if exists)
+            // Todo title and scheduled time (if exists)
             VStack(alignment: .center, spacing: 8) {
-                Text(task.title)
+                Text(todo.title)
                     .font(.title)
                     .fontWeight(.bold)
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
                 
-                if let scheduledTime = task.scheduledTime {
+                if let scheduledTime = todo.scheduledTime {
                     HStack {
                         Image(systemName: "clock")
                             .foregroundColor(.secondary)
@@ -157,23 +157,23 @@ struct FocusedTodoView: View {
             
             // MARK: Category Badge
 
-            Text(task.category == .required ? "Required" : "Suggested")
+            Text(todo.category == .required ? "Required" : "Suggested")
                 .font(.subheadline)
                 .fontWeight(.medium)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .background(
                     Capsule()
-                        .fill(task.category == .required ? Color.blue.opacity(0.2) : Color.purple.opacity(0.2))
+                        .fill(todo.category == .required ? Color.blue.opacity(0.2) : Color.purple.opacity(0.2))
                 )
-                .foregroundColor(task.category == .required ? .blue : .purple)
+                .foregroundColor(todo.category == .required ? .blue : .purple)
             
             // MARK: Action Buttons
 
             HStack(spacing: 20) {
                 // Complete Button
                 Button(action: {
-                    toggleTaskCompletion(task)
+                    toggleTodoCompletion(todo)
                     // Close the view after marking as complete
                     isPresented = false
                 }) {
@@ -191,18 +191,18 @@ struct FocusedTodoView: View {
                     )
                 }
                 .buttonStyle(PlainButtonStyle())
-                .accessibilityLabel("Mark \(task.title) as complete")
+                .accessibilityLabel("Mark \(todo.title) as complete")
 
                 // Edit Button (Three Dots)
                 Button(action: {
-                    showingEditTask = true
+                    showingEditTodo = true
                 }) {
                     Image(systemName: "ellipsis.circle")
                         .font(.system(size: 24))
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(PlainButtonStyle())
-                .accessibilityLabel("Edit task \(task.title)")
+                .accessibilityLabel("Edit todo \(todo.title)")
             }
         }
         .padding(40)
@@ -223,11 +223,11 @@ struct FocusedTodoView: View {
     
     // MARK: - Actions
     
-    /// Toggles the completion state of a task and saves the change
-    /// - Parameter task: The task to toggle
-    private func toggleTaskCompletion(_ task: Todo) {
-        // Toggle task completion state
-        task.isCompleted.toggle()
+    /// Toggles the completion state of a todo and saves the change
+    /// - Parameter todo: The todo to toggle
+    private func toggleTodoCompletion(_ todo: Todo) {
+        // Toggle todo completion state
+        todo.isCompleted.toggle()
 
         do {
             // Save the changes to the model
@@ -241,30 +241,30 @@ struct FocusedTodoView: View {
                     // No need to do anything here - just triggering a refresh
                 }
 
-                // If the task is being completed (not reopened), post notification for animation
-                if task.isCompleted {
-                    // Post a notification to trigger completion animation in TaskStackView
-                    print("📣 FocusedTaskView: Posting taskCompletedExternally notification for task: \(task.title)")
-                    print("📣 FocusedTaskView: Task UUID: \(task.uuid.uuidString)")
+                // If the todo is being completed (not reopened), post notification for animation
+                if todo.isCompleted {
+                    // Post a notification to trigger completion animation in TodoStackView
+                    print("📣 FocusedTodoView: Posting todoCompletedExternally notification for todo: \(todo.title)")
+                    print("📣 FocusedTodoView: Todo UUID: \(todo.uuid.uuidString)")
 
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                         NotificationCenter.default.post(
-                            name: .taskCompletedExternally,
+                            name: .todoCompletedExternally,
                             object: nil,
-                            userInfo: ["completedTaskId": task.uuid.uuidString]
+                            userInfo: ["completedTodoId": todo.uuid.uuidString]
                         )
                     }
                 }
             }
         } catch {
-            print("Error toggling task completion: \(error.localizedDescription)")
+            print("Error toggling todo completion: \(error.localizedDescription)")
         }
     }
 }
 
 // MARK: - Preview
 
-#Preview("Focused Task") {
+#Preview("Focused Todo") {
     FocusedTodoView(isPresented: .constant(true))
-        .modelContainer(TaskMockData.createPreviewContainer())
+        .modelContainer(TodoMockData.createPreviewContainer())
 }

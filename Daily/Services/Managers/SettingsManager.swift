@@ -35,19 +35,19 @@ class SettingsManager: ObservableObject {
         /// Key for the launch at login preference
         static let launchAtLogin = "launchAtLogin"
 
-        /// Key for the hour at which tasks reset
+        /// Key for the hour at which todos reset
         static let resetHour = "resetHour"
 
         /// Key for tracking whether login instructions have been shown
         static let hasShownLoginItemInstructions = "hasShownLoginItemInstructions"
 
-        /// Key for whether required task notifications are enabled
-        static let requiredTaskNotificationsEnabled = "requiredTaskNotificationsEnabled"
+        /// Key for whether required todo notifications are enabled
+        static let requiredTodoNotificationsEnabled = "requiredTodoNotificationsEnabled"
 
-        /// Key for whether suggested task notifications are enabled
-        static let suggestedTaskNotificationsEnabled = "suggestedTaskNotificationsEnabled"
+        /// Key for whether suggested todo notifications are enabled
+        static let suggestedTodoNotificationsEnabled = "suggestedTodoNotificationsEnabled"
 
-        /// Key for the default reminder time (in minutes before task time)
+        /// Key for the default reminder time (in minutes before todo time)
         static let defaultReminderMinutesBefore = "defaultReminderMinutesBefore"
     }
     
@@ -63,7 +63,7 @@ class SettingsManager: ObservableObject {
         }
     }
     
-    /// The hour of the day (0-23) when tasks should reset
+    /// The hour of the day (0-23) when todos should reset
     @Published var resetHour: Int {
         didSet {
             // Persist the change to UserDefaults
@@ -71,19 +71,19 @@ class SettingsManager: ObservableObject {
         }
     }
 
-    /// Whether notifications for required tasks are enabled
-    @Published var requiredTaskNotificationsEnabled: Bool {
+    /// Whether notifications for required todos are enabled
+    @Published var requiredTodoNotificationsEnabled: Bool {
         didSet {
             // Persist the change to UserDefaults
-            UserDefaults.standard.set(requiredTaskNotificationsEnabled, forKey: Keys.requiredTaskNotificationsEnabled)
+            UserDefaults.standard.set(requiredTodoNotificationsEnabled, forKey: Keys.requiredTodoNotificationsEnabled)
         }
     }
 
-    /// Whether notifications for suggested tasks are enabled
-    @Published var suggestedTaskNotificationsEnabled: Bool {
+    /// Whether notifications for suggested todos are enabled
+    @Published var suggestedTodoNotificationsEnabled: Bool {
         didSet {
             // Persist the change to UserDefaults
-            UserDefaults.standard.set(suggestedTaskNotificationsEnabled, forKey: Keys.suggestedTaskNotificationsEnabled)
+            UserDefaults.standard.set(suggestedTodoNotificationsEnabled, forKey: Keys.suggestedTodoNotificationsEnabled)
         }
     }
     
@@ -99,8 +99,8 @@ class SettingsManager: ObservableObject {
         // Load saved settings or use defaults
         self.launchAtLogin = UserDefaults.standard.bool(forKey: Keys.launchAtLogin)
         self.resetHour = UserDefaults.standard.integer(forKey: Keys.resetHour)
-        self.requiredTaskNotificationsEnabled = UserDefaults.standard.bool(forKey: Keys.requiredTaskNotificationsEnabled)
-        self.suggestedTaskNotificationsEnabled = UserDefaults.standard.bool(forKey: Keys.suggestedTaskNotificationsEnabled)
+        self.requiredTodoNotificationsEnabled = UserDefaults.standard.bool(forKey: Keys.requiredTodoNotificationsEnabled)
+        self.suggestedTodoNotificationsEnabled = UserDefaults.standard.bool(forKey: Keys.suggestedTodoNotificationsEnabled)
 
         // Default to 4am for reset hour if not set
         if self.resetHour == 0 {
@@ -108,15 +108,15 @@ class SettingsManager: ObservableObject {
             UserDefaults.standard.set(self.resetHour, forKey: Keys.resetHour)
         }
 
-        // Default to notifications enabled for required tasks only
-        if UserDefaults.standard.object(forKey: Keys.requiredTaskNotificationsEnabled) == nil {
-            self.requiredTaskNotificationsEnabled = true
-            UserDefaults.standard.set(true, forKey: Keys.requiredTaskNotificationsEnabled)
+        // Default to notifications enabled for required todos only
+        if UserDefaults.standard.object(forKey: Keys.requiredTodoNotificationsEnabled) == nil {
+            self.requiredTodoNotificationsEnabled = true
+            UserDefaults.standard.set(true, forKey: Keys.requiredTodoNotificationsEnabled)
         }
 
-        if UserDefaults.standard.object(forKey: Keys.suggestedTaskNotificationsEnabled) == nil {
-            self.suggestedTaskNotificationsEnabled = false
-            UserDefaults.standard.set(false, forKey: Keys.suggestedTaskNotificationsEnabled)
+        if UserDefaults.standard.object(forKey: Keys.suggestedTodoNotificationsEnabled) == nil {
+            self.suggestedTodoNotificationsEnabled = false
+            UserDefaults.standard.set(false, forKey: Keys.suggestedTodoNotificationsEnabled)
         }
 
         // Ensure login item status is synced on startup
@@ -163,7 +163,7 @@ class SettingsManager: ObservableObject {
     func resetToDefaults() {
         launchAtLogin = false
         resetHour = 4
-        requiredTaskNotificationsEnabled = true
-        suggestedTaskNotificationsEnabled = false
+        requiredTodoNotificationsEnabled = true
+        suggestedTodoNotificationsEnabled = false
     }
 }
