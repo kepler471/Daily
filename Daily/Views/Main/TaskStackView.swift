@@ -194,17 +194,20 @@ struct TaskStackView: View {
 
             // Then show the animating tasks (ones that are completing)
             ForEach(animatingTasks, id: \.id) { task in
-                // Each animating task gets positioned at index 0
-                taskCardView(for: task, at: 0)
+                // Use the same position as the original task (stored in task.order)
+                let originalPosition = min(Int(task.order), filteredTasks.count)
+
+                taskCardView(for: task, at: originalPosition)
                     .transition(
                         AnyTransition.asymmetric(
-                            insertion: .opacity,
+                            insertion: .identity, // No insertion animation - we want it to stay in place
                             removal: AnyTransition.opacity
                                 .combined(with: .offset(x: 250, y: -250))
                                 .combined(with: .scale(scale: 0.2))
                                 .animation(.easeOut(duration: 1.0))
                         )
                     )
+                    .zIndex(1000) // Keep the animating task on top during animation
             }
         }
         .padding()
@@ -569,14 +572,18 @@ struct TaskStackView: View {
                 if completedTask.category == category || category == nil {
                     print("🎬 Starting animation for task: \(completedTask.title)")
 
-                    // Add to the animating tasks array
-                    withAnimation {
-                        // First add it to the array (causes insertion animation)
-                        self.animatingTasks.append(completedTask)
-                    }
+                    // First find if the task is in the current visible tasks array
+                    // to preserve its original position and avoid the jump effect
+                    let taskIndex = self.tasks.firstIndex(where: { $0.uuid.uuidString == taskId }) ?? 0
+                    print("📊 Original task index: \(taskIndex)")
+
+                    // Add to the animating tasks array without animation
+                    // This will make it appear in place without moving
+                    self.animatingTasks.append(completedTask)
 
                     // Then after a short delay, remove it with animation
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    // This delay ensures the task appears to stay in place initially
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                         withAnimation(.easeOut(duration: 1.0)) {
                             // Remove it from the array (triggers removal animation)
                             self.animatingTasks.removeAll(where: { $0.id == completedTask.id })
