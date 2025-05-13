@@ -18,14 +18,7 @@ import BackgroundTasks
 
 // MARK: - Notification Extensions
 
-/// Extension for centralizing notification names used in settings
-extension Notification.Name {
-    /// Notification to show login item instructions for older macOS versions
-    static let showLoginItemInstructions = Notification.Name("showLoginItemInstructions")
-
-    /// Notification for settings updates
-    static let settingsUpdated = Notification.Name("settingsUpdated")
-}
+// Notification names moved to AppNotifications.swift
 
 // MARK: - Settings Manager
 

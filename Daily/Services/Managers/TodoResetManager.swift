@@ -16,15 +16,6 @@ import AppKit
 import UIKit
 #endif
 
-// This section is now moved to AppMenu.swift to centralize notification names
-// extension Notification.Name {
-//     /// Notification sent when todos are reset (for UI updates)
-//     static let todosResetNotification = Notification.Name("TodosResetNotification")
-// }
-
-// MARK: - ModelContext Extensions
-// Note: ModelContext extensions are centralized in Todo+Extensions.swift
-
 // MARK: - Todo Reset Manager
 
 /// Manages the automatic reset of todos at a specified time each day
@@ -34,6 +25,7 @@ import UIKit
 /// - Handling manual reset requests
 /// - Persisting todo completion state
 /// - Notifying the UI of changes
+/// - Supporting background reset for iOS
 class TodoResetManager: ObservableObject {
     // MARK: Properties
     
@@ -46,8 +38,24 @@ class TodoResetManager: ObservableObject {
     /// Set to store Combine subscription cancellables
     private var cancellables = Set<AnyCancellable>()
     
+    /// The settings manager to get the reset hour
+    private var settingsManager: SettingsManager?
+    
     /// The hour (in 24-hour format) when todos should reset
-    private let resetHour: Int = 4
+    private var resetHour: Int {
+        return settingsManager?.resetHour ?? 4 // Default to 4 AM if settings not available
+    }
+    
+    /// Last reset date for tracking purposes
+    private var lastResetDate: Date {
+        get {
+            let storedDate = UserDefaults.standard.object(forKey: "lastTodoResetDate") as? Date
+            return storedDate ?? Date.distantPast
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "lastTodoResetDate")
+        }
+    }
     
     // MARK: - Initialization
     
@@ -73,6 +81,19 @@ class TodoResetManager: ObservableObject {
             }
             .store(in: &cancellables)
         #endif
+        
+        // Listen for settings changes to update reset hour
+        NotificationCenter.default.publisher(for: .settingsUpdated)
+            .sink { [weak self] _ in
+                self?.scheduleNextReset()
+            }
+            .store(in: &cancellables)
+    }
+    
+    /// Set the settings manager for accessing user preferences
+    func setSettingsManager(_ manager: SettingsManager) {
+        self.settingsManager = manager
+        scheduleNextReset() // Reschedule with new settings
     }
     
     // MARK: - Reset Scheduling
@@ -124,10 +145,40 @@ class TodoResetManager: ObservableObject {
     /// This is called when the app becomes active to ensure the timer is still valid
     /// after the system has been asleep or the app has been inactive.
     private func checkAndRescheduleIfNeeded() {
+        // Check if we've passed the reset time since last reset
+        if shouldResetTodos() {
+            resetAllTodos()
+        }
+        
         // If we don't have a timer or it's invalid, reschedule
         if timer == nil || timer?.isValid == false {
             scheduleNextReset()
         }
+    }
+    
+    /// Determines if todos should be reset based on the last reset date
+    /// - Returns: True if todos should be reset, false otherwise
+    private func shouldResetTodos() -> Bool {
+        let now = Date()
+        let calendar = Calendar.current
+        
+        // Get today's reset time
+        var components = calendar.dateComponents([.year, .month, .day], from: now)
+        components.hour = resetHour
+        components.minute = 0
+        components.second = 0
+        
+        guard let todayResetDate = calendar.date(from: components) else {
+            return false
+        }
+        
+        // If it's past reset time and we haven't reset today
+        if now > todayResetDate && 
+            !calendar.isDate(lastResetDate, inSameDayAs: now) {
+            return true
+        }
+        
+        return false
     }
     
     // MARK: - Todo Reset Operations
@@ -139,7 +190,8 @@ class TodoResetManager: ObservableObject {
     /// 2. Marks them as incomplete
     /// 3. Saves the changes
     /// 4. Notifies the UI to update
-    func resetAllTodos() {
+    @discardableResult
+    func resetAllTodos() -> Bool {
         do {
             // Fetch all completed todos
             let completedTodos = try modelContext.fetchCompletedTodos(category: nil)
@@ -153,6 +205,9 @@ class TodoResetManager: ObservableObject {
             // Save changes
             try modelContext.save()
             
+            // Update last reset date
+            lastResetDate = Date()
+            
             // Notify observers of the change
             objectWillChange.send()
             
@@ -163,8 +218,10 @@ class TodoResetManager: ObservableObject {
             }
             
             print("Successfully reset \(count) todos at \(Date().formatted(date: .abbreviated, time: .standard))")
+            return true
         } catch {
             print("Failed to reset todos: \(error.localizedDescription)")
+            return false
         }
     }
     
@@ -173,20 +230,29 @@ class TodoResetManager: ObservableObject {
         resetAllTodos()
         scheduleNextReset()
     }
-}
-
-// MARK: - Environment Key for TodoResetManager
-
-/// Define the environment key for accessing the TodoResetManager
-struct ResetTodoManagerKey: EnvironmentKey {
-    static let defaultValue: TodoResetManager? = nil
-}
-
-/// Extend the environment values to provide access to the TodoResetManager
-extension EnvironmentValues {
-    /// Access the todo reset manager through the SwiftUI environment
-    var resetTodoManager: TodoResetManager? {
-        get { self[ResetTodoManagerKey.self] }
-        set { self[ResetTodoManagerKey.self] = newValue }
+    
+    // MARK: - Background Operations (iOS)
+    
+    /// Resets todos when running in the background on iOS
+    /// - Returns: True if reset was successful, false otherwise
+    @MainActor
+    func resetTodosInBackground() async -> Bool {
+        // Check if we need to reset
+        guard shouldResetTodos() else {
+            print("Background task: No need to reset todos")
+            return false
+        }
+        
+        // Perform the reset
+        let success = resetAllTodos()
+        
+        // Update badge count through notification manager
+        if success {
+            await NotificationManager.shared.refreshBadgeCount()
+        }
+        
+        return success
     }
 }
+
+// No duplicate notification extension needed - using existing notification names instead

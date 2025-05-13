@@ -22,7 +22,7 @@ struct SettingsView: View {
     @EnvironmentObject private var settingsManager: SettingsManager
 
     /// Reference to the notification manager for notification handling
-    private let notificationManager = NotificationManager.shared
+    @EnvironmentObject private var notificationManager: NotificationManager
 
     /// Controls visibility of the explanation popover for launch at login
     @State private var showingLaunchExplanation = false
@@ -185,11 +185,23 @@ struct SettingsView: View {
                     }
 
                     if notificationManager.isDenied {
+                        #if os(macOS)
                         Button("Open Notification Settings") {
-                            notificationManager.openNotificationSettings()
+                            if let settingsURL = URL(string: "x-apple.systempreferences:com.apple.preference.notifications") {
+                                NSWorkspace.shared.open(settingsURL)
+                            }
                         }
                         .font(.caption)
                         .padding(.top, 2)
+                        #elseif os(iOS)
+                        Button("Open Notification Settings") {
+                            if let url = URL(string: UIApplication.openSettingsURLString) {
+                                UIApplication.shared.open(url)
+                            }
+                        }
+                        .font(.caption)
+                        .padding(.top, 2)
+                        #endif
                     }
                 }
             }
@@ -272,11 +284,12 @@ struct SettingsView: View {
         )
 
         // Add the request to the notification center
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("Error sending test notification: \(error.localizedDescription)")
-            } else {
+        Task {
+            do {
+                try await UNUserNotificationCenter.current().add(request)
                 print("Test notification scheduled successfully")
+            } catch {
+                print("Error sending test notification: \(error.localizedDescription)")
             }
         }
     }
@@ -287,4 +300,5 @@ struct SettingsView: View {
 #Preview {
     SettingsView()
         .environmentObject(SettingsManager())
+        .environmentObject(NotificationManager.shared)
 }
