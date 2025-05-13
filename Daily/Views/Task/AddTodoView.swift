@@ -250,41 +250,20 @@ struct AddTodoView: View {
     /// Creates and saves a new todo with the current input values
     private func addTodo() {
         withAnimation {
-            let newTodo = Todo(
+            // Use the shared DataManager to create the todo
+            let dataManager = DataManager.shared
+            
+            // Set the settings manager if needed
+            if dataManager.settingsManager == nil {
+                dataManager.setSettingsManager(settingsManager)
+            }
+            
+            // Create the todo using the centralized manager
+            _ = dataManager.addTodo(
                 title: title,
-                order: getNextOrder(),
                 category: selectedCategory,
                 scheduledTime: scheduledTime
             )
-            modelContext.insert(newTodo)
-
-            // Schedule notification for the todo if it has a scheduled time
-            if newTodo.scheduledTime != nil {
-                Task {
-                    await newTodo.scheduleNotification(settings: settingsManager)
-                }
-            }
-        }
-    }
-    
-    /// Calculates the next available order value for sorting todos
-    /// - Returns: The next order value for the selected category
-    private func getNextOrder() -> Int {
-        do {
-            let categoryString = selectedCategory.rawValue
-            var descriptor = FetchDescriptor<Todo>(
-                sortBy: [SortDescriptor(\Todo.order, order: .reverse)]
-            )
-            descriptor.predicate = #Predicate<Todo> { todo in
-                todo.categoryRaw == categoryString
-            }
-            descriptor.fetchLimit = 1
-            
-            let result = try modelContext.fetch(descriptor)
-            return (result.first?.order ?? 0) + 1
-        } catch {
-            print("Error fetching next order: \(error)")
-            return 0
         }
     }
 }

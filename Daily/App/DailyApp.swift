@@ -103,6 +103,10 @@ struct DailyApp: App {
         // Create a context for the notification manager
         let context = ModelContext(sharedModelContainer)
         NotificationManager.shared.setModelContext(context)
+        
+        // Initialize the data manager with the model container
+        DataManager.shared.setModelContainer(sharedModelContainer)
+        DataManager.shared.setSettingsManager(settingsManager)
 
         // Set up notifications
         Task {
@@ -214,14 +218,17 @@ struct DailyApp: App {
                 }
             }
             
-            CommandGroup(replacing: .newItem) {
+            // Hide default New Item menu but don't replace it
+            CommandGroup(replacing: .newItem) { }
+            
+            CommandMenu("Todo") {
                 Button("New Todo") {
                     NotificationCenter.default.post(name: .showAddTodoSheet, object: nil)
                 }
                 .keyboardShortcut("n", modifiers: .command)
-            }
-            
-            CommandMenu("Todo") {
+                
+                Divider()
+                
                 Button("Toggle Completion") {
                     // Would need selected todo context
                 }
@@ -238,6 +245,54 @@ struct DailyApp: App {
                     NotificationCenter.default.post(name: .showCompletedTodos, object: nil)
                 }
                 .keyboardShortcut("o", modifiers: .command)
+                
+                Divider()
+                
+                Button("Reset All Data") {
+                    Task {
+                        _ = await DataManager.shared.resetAllData()
+                    }
+                }
+                .keyboardShortcut("0", modifiers: [.command, .option, .shift])
+                
+                Divider()
+                
+                // Notification management functions
+                Button("Synchronize Notifications with Database") {
+                    Task {
+                        do {
+                            let context = ModelContext(sharedModelContainer)
+                            let todos = try context.fetchTodos()
+                            await notificationManager.synchronizeNotificationsWithDatabase(todos: todos)
+                        } catch {
+                            print("Error syncing notifications: \(error)")
+                        }
+                    }
+                }
+                
+                Button("Reschedule All Notifications") {
+                    Task {
+                        do {
+                            let context = ModelContext(sharedModelContainer)
+                            let todos = try context.fetchTodos()
+                            await notificationManager.rescheduleAllNotifications(todos: todos, settings: settingsManager)
+                        } catch {
+                            print("Error rescheduling notifications: \(error)")
+                        }
+                    }
+                }
+                
+                Button("Cancel All Notifications") {
+                    Task {
+                        await notificationManager.cancelAllTodoNotifications()
+                    }
+                }
+                
+                Button("Refresh Badge Count") {
+                    Task {
+                        await notificationManager.refreshBadgeCount()
+                    }
+                }
             }
         }
         

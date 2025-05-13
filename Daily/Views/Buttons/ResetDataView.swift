@@ -12,11 +12,8 @@ import SwiftData
 struct ResetDataView: View {
     // MARK: - Properties
     
-    /// The model context for database operations
-    @Environment(\.modelContext) private var modelContext
-    
-    /// The notification manager for handling notification cancellation
-    @EnvironmentObject private var notificationManager: NotificationManager
+    /// The data manager for handling data reset operations
+    @StateObject private var dataManager = DataManager.shared
     
     /// Optional callback that gets triggered after data reset
     var onReset: (() -> Void)?
@@ -43,27 +40,13 @@ struct ResetDataView: View {
     
     // MARK: - Data Operations
     
-    /// Resets all data by deleting all todos and recreating sample todos
+    /// Resets all data by delegating to the DataManager
     private func resetData() {
         Task {
-            // First cancel all notifications to prevent orphaned notifications
-            await notificationManager.cancelAllTodoNotifications()
-            
-            // Delete all todos
-            do {
-                try modelContext.delete(model: Todo.self)
-                
-                // Re-add sample data
-                try TodoMockData.createSampleTodos(in: modelContext)
-                
-                // Sync notifications with the database to handle the new todos
-                let todos = try modelContext.fetchTodos()
-                await notificationManager.synchronizeNotificationsWithDatabase(todos: todos)
-                
-                // Call the onReset callback if provided
-                onReset?()
-            } catch {
-                print("Error resetting data: \(error)")
+            // Use the centralized data manager to reset all data
+            let success = await dataManager.resetAllData(onReset: onReset)
+            if !success {
+                print("Failed to reset all data")
             }
         }
     }
