@@ -326,6 +326,7 @@ class NotificationManager: NSObject, ObservableObject {
         }
     }
 
+    // MARK: - Cancelling
     /// Cancel a notification for a specific todo
     /// - Parameter todo: The todo whose notification should be canceled
     @MainActor
@@ -354,6 +355,7 @@ class NotificationManager: NSObject, ObservableObject {
         await refreshBadgeCount()
     }
 
+    // MARK: - Rescheduling
     /// Reschedule notifications for all todos based on current settings
     /// - Parameters:
     ///   - todos: The todos to schedule notifications for
@@ -372,11 +374,11 @@ class NotificationManager: NSObject, ObservableObject {
         await refreshBadgeCount()
     }
 
-    /// Synchronizes notifications with the database, removing any orphaned notifications
+    // MARK: - Synchronise - clear orphans
+    /// Synchronises notifications with the database, removing any orphaned notifications
     /// - Parameter todos: All current todos in the database
     @MainActor
     func synchronizeNotificationsWithDatabase(todos: [Daily.Todo]) async {
-        // MARK: Authorization Check
 
         // Skip if not authorized
         guard isAuthorized else {
@@ -434,8 +436,6 @@ class NotificationManager: NSObject, ObservableObject {
                 }
             }
         }
-
-        // MARK: Cleanup Orphaned Notifications
 
         // Clean up orphaned notifications with detailed logging
         if !orphanedDeliveredIdentifiers.isEmpty {

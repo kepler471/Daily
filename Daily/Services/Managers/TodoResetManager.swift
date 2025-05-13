@@ -190,6 +190,7 @@ class TodoResetManager: ObservableObject {
     /// 2. Marks them as incomplete
     /// 3. Saves the changes
     /// 4. Notifies the UI to update
+    /// 5. Ensures notifications are synchronized with the database
     @discardableResult
     func resetAllTodos() -> Bool {
         do {
@@ -215,6 +216,16 @@ class TodoResetManager: ObservableObject {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 // This notification triggers UI updates
                 NotificationCenter.default.post(name: .todosResetNotification, object: nil)
+                
+                // Synchronize notifications with the database after reset
+                Task {
+                    do {
+                        let allTodos = try self.modelContext.fetchTodos()
+                        await NotificationManager.shared.synchronizeNotificationsWithDatabase(todos: allTodos)
+                    } catch {
+                        print("Failed to synchronize notifications after reset: \(error.localizedDescription)")
+                    }
+                }
             }
             
             print("Successfully reset \(count) todos at \(Date().formatted(date: .abbreviated, time: .standard))")

@@ -15,12 +15,16 @@ struct ResetTodosView: View {
     /// Reference to the todo reset manager for handling reset operations
     @EnvironmentObject private var todoResetManager: TodoResetManager
     
+    /// The notification manager for handling notification synchronization
+    @EnvironmentObject private var notificationManager: NotificationManager
+    
+    /// The model context for database operations (used for syncing notifications)
+    @Environment(\.modelContext) private var modelContext
+    
     // MARK: - Body
     
     var body: some View {
-        Button(action: {
-            todoResetManager.resetTodosNow()
-        }) {
+        Button(action: resetTodos) {
             Image(systemName: "arrow.clockwise")
                 .font(.footnote)
                 .foregroundColor(.white)
@@ -36,6 +40,24 @@ struct ResetTodosView: View {
         .accessibilityLabel("Reset all todos")
         .accessibilityHint("Marks all todos as incomplete to start a new day")
     }
+    
+    // MARK: - Actions
+    
+    /// Resets todos and synchronizes notifications
+    private func resetTodos() {
+        // First reset the todos
+        todoResetManager.resetTodosNow()
+        
+        // Then synchronize notifications with the database
+        Task {
+            do {
+                let todos = try modelContext.fetchTodos()
+                await notificationManager.synchronizeNotificationsWithDatabase(todos: todos)
+            } catch {
+                print("Error syncing notifications after reset: \(error.localizedDescription)")
+            }
+        }
+    }
 }
 
 // MARK: - Previews
@@ -49,5 +71,7 @@ struct ResetTodosView: View {
     
     return ResetTodosView()
         .environmentObject(TodoResetManager(modelContext: previewContainer.mainContext))
+        .environmentObject(NotificationManager.shared)
+        .modelContainer(previewContainer)
         .padding()
 }
